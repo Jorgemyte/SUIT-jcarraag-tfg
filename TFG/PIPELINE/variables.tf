@@ -32,7 +32,19 @@ variable "code_pipeline_artifact" {
   default     = "CodePipelineArtifact"
 }
 
-variable "approval_topic_arn" {
-  description = "ARN del tópico de SNS para aprobaciones"
-  type        = string
+variable "GitHubOwner" {
+  description = "Propietario del repositorio de GitHub"
+  type = string
+  default = "Jorgemyte"
+}
+
+variable "GitHubRepo" {
+  description = "Nombre del repositorio de GitHub"
+  type = string
+  default = "SUIT-jcarraag-tfg"
+}
+
+variable "GitHubOAuthToken" {
+  description = "Token de acceso al repositorio de GitHub"
+  type = string
 }

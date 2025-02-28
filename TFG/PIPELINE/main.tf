@@ -690,7 +690,7 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
         Action = [
           "sns:Publish"
         ]
-        Resource = var.approval_topic_arn
+        Resource = aws_sns_topic.approval_topic.arn
       },
       {
         Effect = "Allow"
@@ -706,4 +706,149 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
 resource "aws_iam_role_policy_attachment" "CodePipelinePolicyAttachment" {
   role       = aws_iam_role.CodePipelineRole.name
   policy_arn = aws_iam_policy.CodePipelinePolicy.arn
+}
+
+// ---------------------------- CODE PIPELINE -------------------------------------------------------
+
+data "aws_secretsmanager_secret_version" "github_token" {
+  secret_id = "aws-jcarraag-GitHub"
+}
+
+resource "aws_codepipeline" "ServerlessUITestPipeline" {
+  name     = "${var.project_name}-ServerlessUITestPipeline"
+  role_arn = aws_iam_role.CodePipelineRole.arn
+
+  stage {
+    name = "Source"
+
+    action {
+      name             = "SUITestSource"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "GitHub"
+      version          = "1"
+      output_artifacts = ["SUITestSourceOutput"]
+
+      configuration = {
+        Owner      = var.GitHubOwner
+        Repo       = var.GitHubRepo
+        Branch     = "TFG"
+        OAuthToken = data.aws_secretsmanager_secret_version.github_token.secret_string
+      }
+
+      run_order = 1
+    }
+  }
+
+  stage {
+    name = "Build"
+
+    action {
+      name             = "BuildContainer"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      input_artifacts  = ["SUITestSourceOutput"]
+      output_artifacts = ["BuildContainerArtifact"]
+
+      configuration = {
+        ProjectName = aws_codebuild_project.BuildContainerProject.name
+      }
+
+      run_order = 1
+    }
+  }
+
+  stage {
+    name = "Test"
+
+    action {
+      name             = "DeployTestEnv"
+      category         = "Deploy"
+      owner            = "AWS"
+      provider         = "Terraform"
+      version          = "1"
+      input_artifacts  = ["SUITestSourceOutput"]
+      output_artifacts = ["TestEnvDeploy"]
+
+      configuration = {
+        ActionMode    = "APPLY"
+        RoleArn       = aws_iam_role.TerraformDeployRole.arn
+        StackName     = "${var.project_name}-SUIT-Test-Stack"
+        TemplatePath  = "SUITestSourceOutput::deployment.tf"
+      }
+
+      region    = var.aws_region
+      run_order = 1
+    }
+
+    action {
+      name             = "Run-Mod1-Test"
+      category         = "Invoke"
+      owner            = "AWS"
+      provider         = "StepFunctions"
+      version          = "1"
+      input_artifacts  = ["TestEnvDeploy"]
+      output_artifacts = ["Mod1TestOut"]
+
+      configuration = {
+        ExecutionNamePrefix = "suit"
+        Input               = "{\"DDBKey\":{\"ModId\":{\"S\":\"mod1\"}}}"
+        StateMachineArn     = "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:stateMachine:SUIT-StateMachine"
+      }
+
+      region    = var.aws_region
+      run_order = 2
+    }
+  }
+
+  stage {
+    name = "Approval"
+
+    action {
+      name      = "DeployApproval"
+      category  = "Approval"
+      owner     = "AWS"
+      provider  = "Manual"
+      version   = "1"
+
+      configuration = {
+        NotificationArn    = aws_sns_topic.approval_topic.arn
+        ExternalEntityLink = "https://master.${aws_amplify_app.StatusPage.default_domain}/?earn=#{TestVariables.ExecutionArn}"
+        CustomData         = "Approve production deployment after validating the test status."
+      }
+
+      run_order = 1
+    }
+  }
+
+  stage {
+    name = "ProdDeploy"
+
+    action {
+      name             = "DeployProd"
+      category         = "Deploy"
+      owner            = "AWS"
+      provider         = "Terraform"
+      version          = "1"
+      input_artifacts  = ["SUITestSourceOutput"]
+      output_artifacts = ["ProdDeploy"]
+
+      configuration = {
+        ActionMode    = "APPLY"
+        RoleArn       = aws_iam_role.TerraformDeployRole.arn
+        StackName     = "${var.project_name}-SUIT-Prod-Stack"
+        TemplatePath  = "SUITestSourceOutput::prod-deploy.tf"
+      }
+
+      region    = var.aws_region
+      run_order = 1
+    }
+  }
+
+  artifact_store {
+    type     = "S3"
+    location = var.code_pipeline_artifact
+  }
 }
