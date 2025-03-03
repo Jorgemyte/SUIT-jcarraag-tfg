@@ -26,6 +26,7 @@ override.tf.json
 .terraformrc
 terraform.rc
 .vscode/settings.json
+<<<<<<< HEAD
 .terraform.lock.hcl
 
 # Archivos generados por LaTeX
@@ -52,3 +53,6 @@ terraform.rc
 # Archivos de configuración de editores
 *.vscode/
 *.idea/
+=======
+.terraform.lock.hcl
+>>>>>>> 5c22c6c (gitignore y prueba)
