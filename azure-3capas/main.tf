@@ -2,6 +2,10 @@ module "network" {
   source = "./NETWORKS"
 }
 
+module "virtual_machines" {
+  source = "./VMs"
+}
+
 /* resource "azurerm_resource_group" "example" {
   name     = "example-resources"
   location = "West Europe"
