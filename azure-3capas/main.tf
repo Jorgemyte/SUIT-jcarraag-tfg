@@ -1,9 +1,37 @@
+// --------------------------------------------------------------------------- RESOURCE GROUP ------------------------------------------------------------------------------
+
+resource "azurerm_resource_group" "resource_group" {
+  name     = var.resource_group_name
+  location = var.location
+}
+
+// --------------------------------------------------------------------------- MODULES ------------------------------------------------------------------------------
+
 module "network" {
   source = "./NETWORKS"
+
+  depends_on = [ azurerm_resource_group.resource_group ]
 }
 
 module "virtual_machines" {
   source = "./VMs"
+
+  az1_public_web  = module.network.az1_public_web
+  az2_public_web  = module.network.az2_public_web
+  az1_private_app = module.network.az1_private_app
+  az2_private_app = module.network.az2_private_app
+  sg_web          = module.security_groups.sg_web
+  sg_app          = module.security_groups.sg_app
+  sg_bastion      = module.security_groups.sg_bastion
+
+  depends_on = [ module.network, module.security_groups, azurerm_resource_group.resource_group ]
+
+}
+
+module "security_groups" {
+  source = "./SECURITY_GROUPS"
+
+  depends_on = [ module.network, azurerm_resource_group.resource_group ]
 }
 
 /* resource "azurerm_resource_group" "example" {
