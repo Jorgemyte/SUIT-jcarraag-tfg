@@ -9,6 +9,7 @@ resource "azurerm_virtual_machine" "VM_AZ1_WEB" {
   network_interface_ids = [azurerm_network_interface.nic_VM_AZ1_Web.id]
   vm_size               = var.vm_size
 
+  availability_set_id = "1"
   delete_os_disk_on_termination = true
 
   storage_os_disk {
@@ -54,6 +55,7 @@ resource "azurerm_virtual_machine" "VM_AZ2_WEB" {
   network_interface_ids = [azurerm_network_interface.nic_VM_AZ2_Web.id]
   vm_size               = var.vm_size
 
+  availability_set_id = "2"
   delete_os_disk_on_termination = true
 
   storage_os_disk {
@@ -98,6 +100,7 @@ resource "azurerm_virtual_machine" "VM_AZ1_APP" {
   network_interface_ids = [azurerm_network_interface.nic_VM_AZ1_App.id]
   vm_size               = var.vm_size
 
+  availability_set_id = "1"
   delete_os_disk_on_termination = true
 
   storage_os_disk {
@@ -142,6 +145,7 @@ resource "azurerm_virtual_machine" "VM_AZ2_APP" {
   network_interface_ids = [azurerm_network_interface.nic_VM_AZ2_App.id]
   vm_size               = var.vm_size
 
+  availability_set_id = "2"
   delete_os_disk_on_termination = true
 
   storage_os_disk {
@@ -186,6 +190,7 @@ resource "azurerm_virtual_machine" "bastion_host" {
   network_interface_ids = [azurerm_network_interface.nic_BASTION.id]
   vm_size               = var.vm_size
 
+  availability_set_id = "1"
   delete_os_disk_on_termination = true
 
   storage_os_disk {
