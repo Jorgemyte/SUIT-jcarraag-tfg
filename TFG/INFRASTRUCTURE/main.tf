@@ -379,7 +379,7 @@ resource "aws_iam_policy" "step_functions_role_policy" {
           "dynamodb:GetItem"
         ]
         Resource = [
-          aws_ecs_task.serverless_firefox_ecs_task.arn,
+          aws_ecs_task_definition.serverless_firefox_ecs_task.arn,
           "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.modules_table}",
           "${aws_lambda_function.serverless_chrome_stable.arn}:*",
           "${aws_lambda_function.serverless_chrome_beta.arn}:*",
@@ -542,7 +542,7 @@ resource "aws_ecs_task_definition" "serverless_firefox_ecs_task" {
 
   tags = {
     Application = var.stack_id
-    Name        = "SUIT-${var.project_name}- ServerlessFirefoxECSTask-${var.environment}"
+    Name        = "SUIT-${var.project_name}-ServerlessFirefoxECSTask-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -559,3 +559,117 @@ resource "aws_security_group" "execution_sg" {
     cidr_blocks = "0.0.0.0/0"
   }
 }
+
+// ---------------------------- SERVERLESS CHROME STABLE -------------------------------------------------------
+
+resource "aws_lambda_function" "serverless_chrome_stable" {
+  function_name = "SUIT-${var.project_name}-ChromeStable"
+  description   = "Lambda function to run Chrome Browser Stable and UI Tests"
+  memory_size   = 1024
+  package_type  = "Image"
+  role          = aws_iam_role.lambda_execution_role.arn
+  timeout       = 303
+
+  image_uri = var.container_name
+
+  image_config {
+    entry_point = [
+      "/var/lang/bin/python",
+      "-m",
+      "awslambdaric"
+    ]
+    command = ["app.lambda_handler"]
+  }
+
+  environment {
+    variables = {
+      BROWSER         = "Chrome"
+      BROWSER_VERSION = "88.0.4324.150"
+      DRIVER_VERSION  = "88.0.4324.96"
+    }
+  }
+
+  tags = {
+    Application = var.stack_id
+    Name        = "SUIT-${var.project_name}-ChromeStable-${var.environment}"
+    Environment = var.environment
+    Owner       = var.owner
+  }
+}
+
+// ---------------------------- SERVERLESS CHROME BETA -------------------------------------------------------
+
+resource "aws_lambda_function" "serverless_chrome_beta" {
+  function_name = "SUIT-${var.project_name}-ChromeBeta"
+  description   = "Lambda function to run Chrome Browser Beta and UI Tests"
+  memory_size   = 1024
+  package_type  = "Image"
+  role          = aws_iam_role.lambda_execution_role.arn
+  timeout       = 303
+
+  image_uri = var.container_name
+
+  image_config {
+    entry_point = [
+      "/var/lang/bin/python",
+      "-m",
+      "awslambdaric"
+    ]
+    command = ["app.lambda_handler"]
+  }
+
+  environment {
+    variables = {
+      BROWSER         = "Chrome"
+      BROWSER_VERSION = "89.0.4389.47"
+      DRIVER_VERSION  = "89.0.4389.23"
+    }
+  }
+
+  tags = {
+    Application = var.stack_id
+    Name        = "SUIT-${var.project_name}-ChromeBeta-${var.environment}"
+    Environment = var.environment
+    Owner       = var.owner
+  }
+}
+
+// ---------------------------- SERVERLESS CHROME VIDEO -------------------------------------------------------
+
+resource "aws_lambda_function" "serverless_chrome_video" {
+  function_name = "SUIT-${var.project_name}-ChromeVideo"
+  description   = "Lambda function to run Chrome Browser Stable and UI Tests and record a video"
+  memory_size   = 2048
+  package_type  = "Image"
+  role          = aws_iam_role.lambda_execution_role.arn
+  timeout       = 303
+
+  image_uri = var.container_name
+
+  image_config {
+    entry_point = [
+      "/var/lang/bin/python",
+      "-m",
+      "awslambdaric"
+    ]
+    command = ["app.lambda_handler"]
+  }
+
+  environment {
+    variables = {
+      BROWSER         = "Chrome"
+      BROWSER_VERSION = "88.0.4324.150"
+      DRIVER_VERSION  = "88.0.4324.96"
+      DISPLAY = ":25"
+    }
+  }
+
+  tags = {
+    Application = var.stack_id
+    Name        = "SUIT-${var.project_name}-ChromeVideo-${var.environment}"
+    Environment = var.environment
+    Owner       = var.owner
+  }
+}
+
+// ---------------------------- AUTOMATED TESTING STATE MACHINE -------------------------------------------------------
