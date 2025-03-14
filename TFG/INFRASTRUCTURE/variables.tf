@@ -26,40 +26,53 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
-// -------------------- VARIABLES CÓDIGO TEMPORAL
-
-variable "container_name" {
-  description = "Enter the name of the container to be used"
-  type        = string
-  default     = "suit-container-image"
-}
-
-variable "modules_table" {
-  description = "Enter the name of the Modules Table"
-  type        = string
-  default     = "ModulesTable"
-}
+// -------------------- VARIABLES CÓDIGO TEMPORAL ECS
 
 variable "status_table" {
-  description = "Enter the name of the Status Table"
+  description = "Nombre de la tabla de estado de DynamoDB"
   type        = string
   default     = "StatusTable"
 }
 
 variable "test_output_bucket" {
-  description = "Enter the name of the Test Output Bucket"
+  description = "Nombre del bucket de salida de pruebas"
   type        = string
   default     = "TestOutputBucket"
 }
 
 variable "code_pipeline_artifact" {
-  description = "Enter the name of the CodePipeline Artifact"
+  description = "Nombre del bucket de artefactos de CodePipeline"
   type        = string
   default     = "CodePipelineArtifact"
 }
 
-variable "test_app_domain" {
-  description = "Enter the name of the Test App Domain"
+// -------------------- VARIABLES CÓDIGO TEMPORAL LAMBDA
+
+variable "stack_name" {
+  description = "Nombre del stack"
   type        = string
-  default     = "TestAppDomain"
+}
+
+// -------------------- VARIABLES CÓDIGO TEMPORAL UPDATE MODULES
+
+variable "modules_table" {
+  description = "Nombre de la tabla de módulos"
+  type        = string
+}
+
+// -------------------- VARIABLES CÓDIGO TEMPORAL SERVERLESS FIREFOX
+
+variable "container_name" {
+  description = "El nombre de la imagen del contenedor"
+  type        = string
+}
+
+variable "test_app_domain" {
+  description = "El dominio de la aplicación de prueba"
+  type        = string
+}
+
+variable "stack_id" {
+  description = "El ID del stack de AWS"
+  type        = string
 }
