@@ -673,3 +673,12 @@ resource "aws_lambda_function" "serverless_chrome_video" {
 }
 
 // ---------------------------- AUTOMATED TESTING STATE MACHINE -------------------------------------------------------
+
+resource "aws_sfn_state_machine" "automated_testing_state_machine" {
+  name = "SUIT-${var.project_name}-StateMachine"
+  role_arn = aws_iam_role.step_functions_role.arn
+
+  definition = jsonencode({
+  })
+
+}
