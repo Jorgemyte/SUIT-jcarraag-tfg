@@ -55,9 +55,9 @@ variable "stack_name" {
 
 // -------------------- VARIABLES CÓDIGO TEMPORAL UPDATE MODULES
 
-variable "modules_table" {
-  description = "Nombre de la tabla de módulos"
-  type        = string
+variable "modules_table_name" {
+  description = "Nombre de la tabla de módulos (DynamoDB Table)"
+  type = string
 }
 
 // -------------------- VARIABLES CÓDIGO TEMPORAL SERVERLESS FIREFOX

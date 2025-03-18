@@ -322,7 +322,7 @@ resource "aws_iam_policy" "update_modules_lambda_role_policy" {
         "dynamodb:PutItem",
         "dynamodb:UpdateItem"
       ]
-      Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.modules_table}"
+      Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.modules_table_name}"
     }]
   })
 
@@ -379,8 +379,8 @@ resource "aws_iam_policy" "step_functions_role_policy" {
           "dynamodb:GetItem"
         ]
         Resource = [
-          aws_ecs_task_definition.serverless_firefox_ecs_task.arn,
-          "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.modules_table}",
+          "${aws_ecs_task_definition.serverless_firefox_ecs_task.arn}",
+          "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.modules_table_name}",
           "${aws_lambda_function.serverless_chrome_stable.arn}:*",
           "${aws_lambda_function.serverless_chrome_beta.arn}:*",
           "${aws_lambda_function.serverless_chrome_video.arn}:*"
@@ -390,8 +390,8 @@ resource "aws_iam_policy" "step_functions_role_policy" {
         Effect = "Allow"
         Action = "iam:PassRole"
         Resource = [
-          aws_iam_role.ecs_task_role.arn,
-          aws_iam_role.ecs_task_execution_role.arn
+          "${aws_iam_role.ecs_task_role.arn}",
+          "${aws_iam_role.ecs_task_execution_role.arn}"
         ]
       }
     ]
@@ -425,7 +425,7 @@ resource "aws_lambda_function" "update_modules_lambda" {
 
   environment {
     variables = {
-      TABLE_NAME = var.modules_table
+      TABLE_NAME = var.modules_table_name
     }
   }
 
@@ -442,7 +442,7 @@ resource "aws_lambda_function" "update_modules_lambda" {
 resource "null_resource" "update_modules" {
   triggers = {
     service_token = aws_lambda_function.update_modules_lambda.arn
-    table         = aws_dynamodb_table.modules_table.name
+    table         = var.modules_table_name // aws_dynamodb_table.modules_table.name
     modules       = jsonencode([
       {
         ModId     = "mod1"
@@ -679,6 +679,322 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
   role_arn = aws_iam_role.step_functions_role.arn
 
   definition = jsonencode({
+    "Comment": "SUIT State Machine",
+    "StartAt": "Get Test Cases",
+    "States": {
+      "Get Test Cases": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::dynamodb:getItem",
+        "Parameters": {
+          "TableName": "${var.modules_table_name}",
+          "Key.$": "$.DDBKey"
+        },
+        "Next": "Run Tests"
+      },
+      "Run Tests": {
+        "Type": "Parallel",
+        "Branches": [
+          {
+            "StartAt": "Test Chrome Stable",
+            "States": {
+              "Test Chrome Stable": {
+                "Type": "Map",
+                "MaxConcurrency": 0,
+                "ItemsPath": "$.Item.TestCases.L",
+                "Iterator": {
+                  "StartAt": "Chrome Stable",
+                  "States": {
+                    "Chrome Stable": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${aws_lambda_function.serverless_chrome_stable.arn}:$LATEST",
+                        "Payload": {
+                          "tcname.$": "$.S",
+                          "module.$": "$$.Execution.Input.DDBKey.ModId.S",
+                          "testrun.$": "$$.Execution.Id",
+                          "s3buck": "${var.test_output_bucket}",
+                          "s3prefix": "${var.stack_name}/",
+                          "WebURL": "https://master.${var.test_app_domain}",
+                          "StatusTable": "${var.status_table}"
+                        },
+                        "End": true
+                      }
+                    }
+                  },
+                  "End": true
+                }
+              }
+            }
+          },
+          {
+            "StartAt": "Test Chrome Beta",
+            "States": {
+              "Test Chrome Beta": {
+                "Type": "Map",
+                "MaxConcurrency": 0,
+                "ItemsPath": "$.Item.TestCases.L",
+                "Iterator": {
+                  "StartAt": "Chrome Beta",
+                  "States": {
+                    "Chrome Beta": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::lambda:invoke",
+                      "Parameters": {
+                        "FunctionName": "${aws_lambda_function.serverless_chrome_beta.arn}:$LATEST",
+                        "Payload": {
+                          "tcname.$": "$.S",
+                          "module.$": "$$.Execution.Input.DDBKey.ModId.S",
+                          "testrun.$": "$$.Execution.Id",
+                          "s3buck": "${var.test_output_bucket}",
+                          "s3prefix": "${var.stack_name}/",
+                          "WebURL": "https://master.${var.test_app_domain}",
+                          "StatusTable": "${var.status_table}"
+                        },
+                        "End": true
+                      }
+                    }
+                  },
+                  "End": true
+                }
+              }
+            }
+          },
+          {
+            "StartAt": "Chrome Video",
+            "States": {
+              "Chrome Video": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::lambda:invoke",
+                "Parameters": {
+                  "FunctionName": "${aws_lambda_function.serverless_chrome_video.arn}:$LATEST",
+                  "Payload": {
+                    "tcname": "tc0011",
+                    "module": "mod7",
+                    "testrun.$": "$$.Execution.Id",
+                    "s3buck": "${var.test_output_bucket}",
+                    "s3prefix": "${var.stack_name}/",
+                    "WebURL": "https://master.${var.test_app_domain}",
+                    "StatusTable": "${var.status_table}"
+                  },
+                  "End": true
+                }
+              }
+            }
+          },
+          {
+            "StartAt": "Test Firefox Stable",
+            "States": {
+              "Test Firefox Stable": {
+                "Type": "Map",
+                "MaxConcurrency": 0,
+                "ItemsPath": "$.Item.TestCases.L",
+                "Iterator": {
+                  "StartAt": "Firefox Stable",
+                  "States": {
+                    "Firefox Stable": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::ecs:runTask.waitForTaskToken",
+                      "Parameters": {
+                        "LaunchType": "FARGATE",
+                        "Cluster": "${aws_ecs_cluster.serverless_cluster.arn}",
+                        "TaskDefinition": "${aws_ecs_task_definition.serverless_firefox_ecs_task.arn}",
+                        "PlatformVersion": "1.4.0",
+                        "NetworkConfiguration": {
+                          "AwsvpcConfiguration": {
+                            "Subnets": [
+                              "${aws_subnet.public_subnet[0].id}",
+                              "${aws_subnet.public_subnet[1].id}",
+                              "${aws_subnet.public_subnet[2].id}"
+                            ],
+                            "AssignPublicIp": "ENABLED"
+                          }
+                        },
+                        "Overrides": {
+                          "ContainerOverrides": [
+                            {
+                              "Name": "suit-serverless-firefox",
+                              "Environment": [
+                                {
+                                  "Name": "TASK_TOKEN_ENV_VARIABLE",
+                                  "Value.$": "$$.Task.Token"
+                                },
+                                {
+                                  "Name": "BROWSER_VERSION",
+                                  "Value": "86.0"
+                                },
+                                {
+                                  "Name": "DRIVER_VERSION",
+                                  "Value": "0.29.0"
+                                },
+                                {
+                                  "Name": "module",
+                                  "Value.$": "$$.Execution.Input.DDBKey.ModId.S"
+                                },
+                                {
+                                  "Name": "tcname",
+                                  "Value.$": "$.S"
+                                },
+                                {
+                                  "Name": "testrun",
+                                  "Value.$": "$$.Execution.Id"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "End": true
+                      }
+                    }
+                  },
+                  "End": true
+                }
+              }
+            }
+          },
+          {
+            "StartAt": "Test Firefox Beta",
+            "States": {
+              "Test Firefox Beta": {
+                "Type": "Map",
+                "MaxConcurrency": 0,
+                "ItemsPath": "$.Item.TestCases.L",
+                "Iterator": {
+                  "StartAt": "Firefox Beta",
+                  "States": {
+                    "Firefox Beta": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:states:::ecs:runTask.waitForTaskToken",
+                      "Parameters": {
+                        "LaunchType": "FARGATE",
+                        "Cluster": "${aws_ecs_cluster.serverless_cluster.arn}",
+                        "TaskDefinition": "${aws_ecs_task_definition.serverless_firefox_ecs_task.arn}",
+                        "PlatformVersion": "1.4.0",
+                        "NetworkConfiguration": {
+                          "AwsvpcConfiguration": {
+                            "Subnets": [
+                              "${aws_subnet.public_subnet[0].id}",
+                              "${aws_subnet.public_subnet[1].id}",
+                              "${aws_subnet.public_subnet[2].id}"
+                            ]
+                            "AssignPublicIp": "ENABLED"
+                          }
+                        },
+                        "Overrides": {
+                          "ContainerOverrides": [
+                            {
+                              "Name": "suit-serverless-firefox",
+                              "Environment": [
+                                {
+                                  "Name": "TASK_TOKEN_ENV_VARIABLE",
+                                  "Value.$": "$$.Task.Token"
+                                },
+                                {
+                                  "Name": "BROWSER_VERSION",
+                                  "Value": "87.0b3"
+                                },
+                                {
+                                  "Name": "DRIVER_VERSION",
+                                  "Value": "0.29.0"
+                                },
+                                {
+                                  "Name": "module",
+                                  "Value.$": "$$.Execution.Input.DDBKey.ModId.S"
+                                },
+                                {
+                                  "Name": "tcname",
+                                  "Value.$": "$.S"
+                                },
+                                {
+                                  "Name": "testrun",
+                                  "Value.$": "$$.Execution.Id"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "End": true
+                      }
+                    }
+                  },
+                  "End": true
+                }
+              }
+            }
+          },
+          {
+            "StartAt": "Firefox Video",
+            "States": {
+              "Firefox Video": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::ecs:runTask.waitForTaskToken",
+                "Parameters": {
+                  "LaunchType": "FARGATE",
+                  "Cluster": "${aws_ecs_cluster.serverless_cluster.arn}",
+                  "TaskDefinition": "${aws_ecs_task_definition.serverless_firefox_ecs_task.arn}",
+                  "PlatformVersion": "1.4.0",
+                  "NetworkConfiguration": {
+                    "AwsvpcConfiguration": {
+                      "Subnets": [
+                        "${aws_subnet.public_subnet[0].id}",
+                        "${aws_subnet.public_subnet[1].id}",
+                        "${aws_subnet.public_subnet[2].id}"
+                      ]
+                      "AssignPublicIp": "ENABLED"
+                    }
+                  },
+                  "Overrides": {
+                    "ContainerOverrides": [
+                      {
+                        "Name": "suit-serverless-firefox",
+                        "Environment": [
+                          {
+                            "Name": "TASK_TOKEN_ENV_VARIABLE",
+                            "Value.$": "$$.Task.Token"
+                          },
+                          {
+                            "Name": "BROWSER_VERSION",
+                            "Value": "86.0"
+                          },
+                          {
+                            "Name": "DRIVER_VERSION",
+                            "Value": "0.29.0"
+                          },
+                          {
+                            "Name": "module",
+                            "Value": "mod7"
+                          },
+                          {
+                            "Name": "DISPLAY",
+                            "Value": ":25"
+                          },
+                          {
+                            "Name": "tcname",
+                            "Value": "tc0011"
+                          },
+                          {
+                            "Name": "testrun",
+                            "Value.$": "$$.Execution.Id"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "End": true
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
   })
+
+  tags = {
+    Application = var.stack_id
+    Name        = "SUIT-${var.project_name}-StateMachine-${var.environment}"
+    Environment = var.environment
+    Owner       = var.owner
+  }
 
 }
