@@ -4,8 +4,8 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
-variable "project_name" {
-  description = "Nombre del proyecto"
+variable "stack_name" {
+  description = "Nombre del stack"
   type        = string
 }
 

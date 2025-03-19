@@ -1,6 +1,7 @@
-variable "project_name" {
-  description = "Nombre del proyecto"
+variable "stack_name" {
+  description = "Nombre del stack"
   type        = string
+  default     = "jcarraag-TFG"
 }
 
 variable "environment" {
@@ -48,16 +49,14 @@ variable "code_pipeline_artifact" {
 
 // -------------------- VARIABLES CÓDIGO TEMPORAL LAMBDA
 
-variable "stack_name" {
-  description = "Nombre del stack"
-  type        = string
-}
+
 
 // -------------------- VARIABLES CÓDIGO TEMPORAL UPDATE MODULES
 
 variable "modules_table_name" {
   description = "Nombre de la tabla de módulos (DynamoDB Table)"
-  type = string
+  type        = string
+  default     = "ModulesTable"
 }
 
 // -------------------- VARIABLES CÓDIGO TEMPORAL SERVERLESS FIREFOX
@@ -65,11 +64,13 @@ variable "modules_table_name" {
 variable "container_name" {
   description = "El nombre de la imagen del contenedor"
   type        = string
+  default     = "suit-container-image"
 }
 
 variable "test_app_domain" {
   description = "El dominio de la aplicación de prueba"
   type        = string
+  default     = "TestAppDomain"
 }
 
 variable "stack_id" {
