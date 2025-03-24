@@ -4,9 +4,10 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
-variable "stack_name" {
-  description = "Nombre del stack"
+variable "project_name" {
+  description = "Nombre del proyecto"
   type        = string
+  default     = "jcarraag-TFG"
 }
 
 variable "environment" {

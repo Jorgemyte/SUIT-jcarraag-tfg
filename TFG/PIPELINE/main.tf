@@ -1,7 +1,7 @@
 // ---------------------------- APPROVAL TOPIC -------------------------------------------------------
 
 resource "aws_sns_topic" "approval_topic" {
-  name              = "${var.stack_name}-approval-topic"
+  name              = "${var.project_name}-approval-topic"
   kms_master_key_id = "alias/aws/sns"
   display_name      = "SUIT-Approval-Notification"
 
@@ -11,8 +11,7 @@ resource "aws_sns_topic" "approval_topic" {
   } */
 
   tags = {
-    Application = var.stack_id
-    Name        = "${var.stack_name}-approval-topic"
+    Name        = "${var.project_name}-approval-topic"
   }
 }
 
@@ -22,10 +21,10 @@ resource "aws_sns_topic" "approval_topic" {
 data "aws_caller_identity" "current" {}
 
 resource "aws_s3_bucket" "test_output_bucket" {
-  bucket = "${var.stack_name}-test-output-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
+  bucket = "${var.project_name}-test-output-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
 
   tags = {
-    Application = var.stack_id
+
   }
 
   lifecycle {
@@ -60,10 +59,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "test_output_bucke
 // ---------------------------- CODE PIPELINE ARTIFACT (S3 BUCKET) -------------------------------------------------------
 
 resource "aws_s3_bucket" "codepipeline_artifact" {
-  bucket = "${var.stack_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
+  bucket = "${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
 
   tags = {
-    Application = var.stack_id
+
   }
 
   lifecycle {
@@ -98,7 +97,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_arti
 // ---------------------------- ECR REPOSITORY -------------------------------------------------------
 
 resource "aws_ecr_repository" "suit_repo" {
-  name = "suit-${var.stack_name}-repo"
+  name = "suit-${var.project_name}-repo"
 
   image_tag_mutability = "MUTABLE"
 
@@ -134,7 +133,7 @@ resource "aws_ecr_repository_policy" "suit_repo_policy" {
 // ---------------------------- MODULES TABLE (DynamoDB Table) -------------------------------------------------------
 
 resource "aws_dynamodb_table" "modules_table" {
-  name         = "ModulesTable-${var.stack_name}"
+  name         = "ModulesTable-${var.project_name}"
   billing_mode = "PAY_PER_REQUEST"
 
   attribute {
@@ -145,8 +144,7 @@ resource "aws_dynamodb_table" "modules_table" {
   hash_key = "ModId"
 
   tags = {
-    Application = var.stack_id
-    Name        = "ModulesTable-${var.stack_name}"
+    Name        = "ModulesTable-${var.project_name}"
   }
 }
 
@@ -183,7 +181,7 @@ resource "aws_ssm_parameter" "source_repo_parameter" {
 // ---------------------------- STATUS TABLE (DynamoDB Table) -------------------------------------------------------
 
 resource "aws_dynamodb_table" "status_table" {
-  name         = "StatusTable-${var.stack_name}"
+  name         = "StatusTable-${var.project_name}"
   billing_mode = "PAY_PER_REQUEST"
 
   attribute {
@@ -200,7 +198,175 @@ resource "aws_dynamodb_table" "status_table" {
   range_key = "testcaseid"
 
   tags = {
-    Application = var.stack_id
-    Name        = "StatusTable-${var.stack_name}"
+    Name        = "StatusTable-${var.project_name}"
+  }
+}
+
+resource "aws_ssm_parameter" "status_table_parameter" {
+  name        = "StatusTable"
+  type        = "String"
+  value       = aws_dynamodb_table.status_table.name
+  description = "SSM Parameter for Status Table"
+}
+
+// ---------------------------- COGNITO IDENTITY POOL & ROLES -------------------------------------------------------
+
+resource "aws_cognito_identity_pool" "status_page_cognito_ip" {
+  identity_pool_name               = "StatusPageCognitoIP_${var.project_name}"
+  allow_unauthenticated_identities = true
+}
+
+resource "aws_iam_role" "status_page_unauth_role" {
+  name = "StatusPageUnAuthRole-${var.project_name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = "cognito-identity.amazonaws.com"
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "cognito-identity.amazonaws.com:aud" = aws_cognito_identity_pool.status_page_cognito_ip.id
+          }
+          "ForAnyValue:StringLike" = {
+            "cognito-identity.amazonaws.com:amr" = "unauthenticated"
+          }
+        }
+      }
+    ]
+  })
+
+  path = "/"
+}
+
+resource "aws_iam_role_policy" "status_page_unauth_policy" {
+  name   = "StatusPageUnAuthRole-${var.project_name}-Policy"
+  role   = aws_iam_role.status_page_unauth_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Query"
+        ]
+        Resource = aws_dynamodb_table.status_table.arn
+      }
+    ]
+  })
+}
+
+resource "aws_cognito_identity_pool_roles_attachment" "attach_cognito_unauth_role" {
+  identity_pool_id = aws_cognito_identity_pool.status_page_cognito_ip.id
+
+  roles = {
+    "unauthenticated" = aws_iam_role.status_page_unauth_role.arn
+  }
+}
+
+// ---------------------------- AMPLIFY & ROLES -------------------------------------------------------
+
+resource "aws_iam_role" "AmplifyAccessRole" {
+  name = "SUIT-${var.project_name}-AmplifyRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "amplify.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  path = "/"
+}
+
+resource "aws_iam_policy" "AmplifyAccessPolicy" {
+  name = "SUIT-${var.project_name}-AmplifyRole-Policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "codecommit:GitPull"
+        ]
+        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/amplify/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "AmplifyAccessPolicyAttachment" {
+  role       = aws_iam_role.AmplifyAccessRole.name
+  policy_arn = aws_iam_policy.AmplifyAccessPolicy.arn
+}
+
+resource "aws_amplify_app" "TestApp" {
+  name       = "TestAppWebsite"
+  repository = "https://git-codecommit.${var.aws.region}.amazonaws.com/v1/repos/${var.repository_name}"
+  build_spec = jsonencode({
+    version = 1
+    applications = [
+      {
+        frontend = {
+          phases = {
+            build = {
+              commands = []
+            }
+          }
+          artifacts = {
+            baseDirectory = "/"
+            files = ["**/*"]
+          }
+          cache = {
+            paths = []
+          }
+          appRoot = "website"
+        }
+      }
+    ]
+  })
+  iam_service_role_arn = aws_iam_role.AmplifyAccessRole.arn
+
+  custom_rule {
+    source = "/<*>"
+    target = "/index.html"
+    status = "404-200"
+  }
+
+  tags = {
+    Name        = "TestAppWebsite"
+  }
+}
+
+resource "aws_amplify_branch" "TestAppBranch" {
+  app_id          = aws_amplify_app.TestApp.id
+  branch_name     = "master"
+  description     = "Master branch for App"
+  enable_auto_build = true
+  stage           = "PRODUCTION"
+
+  tags = {
+    Name        = "TestAppBranch"
   }
 }

@@ -1,5 +1,5 @@
-variable "stack_name" {
-  description = "Nombre del stack"
+variable "project_name" {
+  description = "Nombre del proyecto"
   type        = string
   default     = "jcarraag-TFG"
 }
@@ -71,9 +71,4 @@ variable "test_app_domain" {
   description = "El dominio de la aplicación de prueba"
   type        = string
   default     = "TestAppDomain"
-}
-
-variable "stack_id" {
-  description = "El ID del stack de AWS"
-  type        = string
 }

@@ -1,8 +1,7 @@
-module "infrastructure" {
-  source = "./INFRASTRUCTURE"
+module "deployment" {
+  source = "./DEPLOYMENT"
 
-  stack_name  = var.stack_name
+  project_name = var.project_name
   environment = var.environment
-  
 
 }

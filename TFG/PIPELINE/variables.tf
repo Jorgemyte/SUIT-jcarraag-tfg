@@ -1,27 +1,23 @@
 variable "repository_name" {
-  description = "Enter the name of the CodeCommit repository"
+  description = "Enter the name of the GitHub repository"
   type        = string
-  default     = "serverless-ui-testing"
+  default     = "SUIT-jcarraag-tfg"
 }
 
 variable "approval_email" {
   description = "Enter the email address to which approval notification needs to be sent"
   type        = string
-  default     = "no-reply@example.com"
+  default     = "jcarraag@emeal.nttdata.com"
   validation {
     condition     = can(regex("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$", var.approval_email))
     error_message = "Expects a valid email address"
   }
 }
 
-variable "stack_id" {
-  description = "El ID del stack de AWS"
+variable "project_name" {
+  description = "Nombre del proyecto"
   type        = string
-}
-
-variable "stack_name" {
-  description = "Nombre del stack"
-  type        = string
+  default     = "jcarraag-TFG"
 }
 
 variable "aws_region" {
@@ -29,3 +25,4 @@ variable "aws_region" {
   type        = string
   default     = "eu-central-1"
 }
+

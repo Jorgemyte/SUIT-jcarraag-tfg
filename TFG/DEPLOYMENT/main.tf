@@ -4,8 +4,7 @@ resource "aws_vpc" "vpc" {
   cidr_block = var.cidr_block
 
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-VPC-${var.environment}"
+    Name        = "SUIT-${var.project_name}-VPC-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -21,8 +20,7 @@ resource "aws_subnet" "public_subnet" {
   map_public_ip_on_launch = true
 
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-Public-Subnet-${count.index + 1}-${var.environment}"
+    Name        = "SUIT-${var.project_name}-Public-Subnet-${count.index + 1}-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -30,8 +28,7 @@ resource "aws_subnet" "public_subnet" {
 
 resource "aws_internet_gateway" "IGW" {
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-IGW-${var.environment}"
+    Name        = "SUIT-${var.project_name}-IGW-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -51,8 +48,7 @@ resource "aws_route_table" "public_route_table" {
   }
 
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-Public-Route-Table-${var.environment}"
+    Name        = "SUIT-${var.project_name}-Public-Route-Table-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -67,10 +63,10 @@ resource "aws_route_table_association" "pub_route_table_assoc" {
 // ---------------------------- ECS CLUSTER & IAM ROLES -------------------------------------------------------
 
 resource "aws_ecs_cluster" "serverless_cluster" {
-  name = "SUIT-${var.stack_name}-Serverless-Cluster"
+  name = "SUIT-${var.project_name}-Serverless-Cluster"
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-Serverless-Cluster-${var.environment}"
+    Name        = "SUIT-${var.project_name}-Serverless-Cluster-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -81,7 +77,7 @@ Este rol es utilizado por el agente de contenedor de ECS para ejecutar tareas.
 Permite que la tarea acceda a otros servicios de AWS necesarios para su ejecución, 
 como Amazon Elastic Container Registry (ECR) para obtener imágenes de contenedor. */
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "SUIT-${var.stack_name}-ECSTaskExecutionRole"
+  name = "SUIT-${var.project_name}-ECSTaskExecutionRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -97,7 +93,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   path = "/"
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-ECSTaskExecutionRole-${var.environment}"
+    Name        = "SUIT-${var.project_name}-ECSTaskExecutionRole-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -113,7 +109,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_attachment" {
 Este rol es utilizado por los contenedores dentro de la tarea para realizar llamadas a las APIs de AWS. 
 Permite que los contenedores accedan a recursos de AWS como S3, DynamoDB, etc. */
 resource "aws_iam_role" "ecs_task_role" {
-  name = "SUIT-${var.stack_name}-ECSTaskRole"
+  name = "SUIT-${var.project_name}-ECSTaskRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -129,7 +125,7 @@ resource "aws_iam_role" "ecs_task_role" {
   path = "/"
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-ECSTaskRole-${var.environment}"
+    Name        = "SUIT-${var.project_name}-ECSTaskRole-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -140,7 +136,7 @@ resource "aws_iam_role" "ecs_task_role" {
 Es una política de IAM que define los permisos específicos para el ecs_task_role. 
 Esta política contiene las acciones permitidas y los recursos a los que el rol puede acceder. */
 resource "aws_iam_policy" "ecs_task_role_policy" {
-  name        = "SUIT-${var.stack_name}-ECSTaskRole-Policy"
+  name        = "SUIT-${var.project_name}-ECSTaskRole-Policy"
   description = "Policy for ECS Task Role"
 
   policy = jsonencode({
@@ -180,7 +176,7 @@ resource "aws_iam_policy" "ecs_task_role_policy" {
   })
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-ECSTaskRole-Policy-${var.environment}"
+    Name        = "SUIT-${var.project_name}-ECSTaskRole-Policy-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -197,7 +193,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_role_policy_attachment" {
 // ---------------------------- LAMBDA EXECUTION ROLES -------------------------------------------------------
 
 resource "aws_iam_role" "lambda_execution_role" {
-  name = "SUIT-${var.stack_name}-LambdaExecutionRole"
+  name = "SUIT-${var.project_name}-LambdaExecutionRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -212,7 +208,7 @@ resource "aws_iam_role" "lambda_execution_role" {
   path = "/"
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-LambdaExecutionRole-${var.environment}"
+    Name        = "SUIT-${var.project_name}-LambdaExecutionRole-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -225,7 +221,7 @@ resource "aws_iam_role_policy_attachment" "lambda_execution_role_attachment" {
 }
 
 resource "aws_iam_policy" "lambda_execution_role_policy" {
-  name        = "SUIT-${var.stack_name}-LambdaExecutionRole-Policy"
+  name        = "SUIT-${var.project_name}-LambdaExecutionRole-Policy"
   description = "Policy for Lambda Execution Role"
 
   policy = jsonencode({
@@ -271,7 +267,7 @@ resource "aws_iam_policy" "lambda_execution_role_policy" {
   })
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-LambdaExecutionRole-Policy-${var.environment}"
+    Name        = "SUIT-${var.project_name}-LambdaExecutionRole-Policy-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -286,7 +282,7 @@ resource "aws_iam_role_policy_attachment" "lambda_execution_role_policy_attachme
 // ---------------------------- UPDATE MODULES LAMBDA ROLES -------------------------------------------------------
 
 resource "aws_iam_role" "update_modules_lambda_role" {
-  name = "SUIT-${var.stack_name}-UpdateModulesLambdaRole"
+  name = "SUIT-${var.project_name}-UpdateModulesLambdaRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -302,7 +298,7 @@ resource "aws_iam_role" "update_modules_lambda_role" {
   path = "/"
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-UpdateModulesLambdaRole-${var.environment}"
+    Name        = "SUIT-${var.project_name}-UpdateModulesLambdaRole-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -315,7 +311,7 @@ resource "aws_iam_role_policy_attachment" "update_modules_lambda_role_attachment
 }
 
 resource "aws_iam_policy" "update_modules_lambda_role_policy" {
-  name        = "SUIT-${var.stack_name}-UpdateModulesLambdaRole-Policy"
+  name        = "SUIT-${var.project_name}-UpdateModulesLambdaRole-Policy"
   description = "Policy for UpdateModulesLambdaRole"
 
   policy = jsonencode({
@@ -331,7 +327,7 @@ resource "aws_iam_policy" "update_modules_lambda_role_policy" {
   })
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-UpdateModulesLambdaRole-Policy-${var.environment}"
+    Name        = "SUIT-${var.project_name}-UpdateModulesLambdaRole-Policy-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -346,7 +342,7 @@ resource "aws_iam_role_policy_attachment" "update_modules_lambda_role_policy_att
 // ---------------------------- STEP FUNCTIONS EXECUTION ROLE -------------------------------------------------------
 
 resource "aws_iam_role" "step_functions_role" {
-  name = "SUIT-${var.stack_name}-SfnExecutionRole"
+  name = "SUIT-${var.project_name}-SfnExecutionRole"
 
   assume_role_policy = jsondecode({
     Version = "2012-10-17"
@@ -362,7 +358,7 @@ resource "aws_iam_role" "step_functions_role" {
   path = "/"
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-SfnExecutionRole-${var.environment}"
+    Name        = "SUIT-${var.project_name}-SfnExecutionRole-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -370,7 +366,7 @@ resource "aws_iam_role" "step_functions_role" {
 }
 
 resource "aws_iam_policy" "step_functions_role_policy" {
-  name = "SUIT-${var.stack_name}-SfnExecutionRole-Policy"
+  name = "SUIT-${var.project_name}-SfnExecutionRole-Policy"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -402,7 +398,7 @@ resource "aws_iam_policy" "step_functions_role_policy" {
   })
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-SfnExecutionRole-Policy-${var.environment}"
+    Name        = "SUIT-${var.project_name}-SfnExecutionRole-Policy-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -419,7 +415,7 @@ data "archive_file" "lambda" {
 
 resource "aws_lambda_function" "update_modules_lambda" {
   filename      = "lambda_function_payload.zip"
-  function_name = "SUIT-${var.stack_name}-UpdateModules"
+  function_name = "SUIT-${var.project_name}-UpdateModules"
   role          = aws_iam_role.update_modules_lambda_role.arn
   handler       = "index.lambda_handler"
   runtime       = "python3.8"
@@ -434,7 +430,7 @@ resource "aws_lambda_function" "update_modules_lambda" {
   }
 
   tags = {
-    Name        = "SUIT-${var.stack_name}-UpdateModules-${var.environment}"
+    Name        = "SUIT-${var.project_name}-UpdateModules-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -484,7 +480,7 @@ resource "null_resource" "update_modules" {
 // ---------------------------- SERVERLESS FIREFOX (FARGATE & LOG GROUP) -------------------------------------------------------
 
 resource "aws_cloudwatch_log_group" "serverless_firefox_log_group" {
-  name              = "/${var.stack_name}/ServerlessFirefox"
+  name              = "/${var.project_name}/ServerlessFirefox"
   retention_in_days = 3
 }
 
@@ -534,7 +530,7 @@ resource "aws_ecs_task_definition" "serverless_firefox_ecs_task" {
         },
         {
           name  = "s3prefix"
-          value = "${var.stack_name}/"
+          value = "${var.project_name}/"
         },
         {
           name  = "AWS_DEFAULT_REGION"
@@ -545,8 +541,7 @@ resource "aws_ecs_task_definition" "serverless_firefox_ecs_task" {
   ])
 
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-ServerlessFirefoxECSTask-${var.environment}"
+    Name        = "SUIT-${var.project_name}-ServerlessFirefoxECSTask-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -567,7 +562,7 @@ resource "aws_security_group" "execution_sg" {
 // ---------------------------- SERVERLESS CHROME STABLE -------------------------------------------------------
 
 resource "aws_lambda_function" "serverless_chrome_stable" {
-  function_name = "SUIT-${var.stack_name}-ChromeStable"
+  function_name = "SUIT-${var.project_name}-ChromeStable"
   description   = "Lambda function to run Chrome Browser Stable and UI Tests"
   memory_size   = 1024
   package_type  = "Image"
@@ -594,8 +589,7 @@ resource "aws_lambda_function" "serverless_chrome_stable" {
   }
 
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-ChromeStable-${var.environment}"
+    Name        = "SUIT-${var.project_name}-ChromeStable-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -604,7 +598,7 @@ resource "aws_lambda_function" "serverless_chrome_stable" {
 // ---------------------------- SERVERLESS CHROME BETA -------------------------------------------------------
 
 resource "aws_lambda_function" "serverless_chrome_beta" {
-  function_name = "SUIT-${var.stack_name}-ChromeBeta"
+  function_name = "SUIT-${var.project_name}-ChromeBeta"
   description   = "Lambda function to run Chrome Browser Beta and UI Tests"
   memory_size   = 1024
   package_type  = "Image"
@@ -631,8 +625,7 @@ resource "aws_lambda_function" "serverless_chrome_beta" {
   }
 
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-ChromeBeta-${var.environment}"
+    Name        = "SUIT-${var.project_name}-ChromeBeta-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -641,7 +634,7 @@ resource "aws_lambda_function" "serverless_chrome_beta" {
 // ---------------------------- SERVERLESS CHROME VIDEO -------------------------------------------------------
 
 resource "aws_lambda_function" "serverless_chrome_video" {
-  function_name = "SUIT-${var.stack_name}-ChromeVideo"
+  function_name = "SUIT-${var.project_name}-ChromeVideo"
   description   = "Lambda function to run Chrome Browser Stable and UI Tests and record a video"
   memory_size   = 2048
   package_type  = "Image"
@@ -669,8 +662,7 @@ resource "aws_lambda_function" "serverless_chrome_video" {
   }
 
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-ChromeVideo-${var.environment}"
+    Name        = "SUIT-${var.project_name}-ChromeVideo-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
@@ -679,7 +671,7 @@ resource "aws_lambda_function" "serverless_chrome_video" {
 // ---------------------------- AUTOMATED TESTING STATE MACHINE -------------------------------------------------------
 
 resource "aws_sfn_state_machine" "automated_testing_state_machine" {
-  name     = "SUIT-${var.stack_name}-StateMachine"
+  name     = "SUIT-${var.project_name}-StateMachine"
   role_arn = aws_iam_role.step_functions_role.arn
 
   definition = jsonencode({
@@ -718,7 +710,7 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                           "module.$" : "$$.Execution.Input.DDBKey.ModId.S",
                           "testrun.$" : "$$.Execution.Id",
                           "s3buck" : "${var.test_output_bucket}",
-                          "s3prefix" : "${var.stack_name}/",
+                          "s3prefix" : "${var.project_name}/",
                           "WebURL" : "https://master.${var.test_app_domain}",
                           "StatusTable" : "${var.status_table}"
                         },
@@ -751,7 +743,7 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                           "module.$" : "$$.Execution.Input.DDBKey.ModId.S",
                           "testrun.$" : "$$.Execution.Id",
                           "s3buck" : "${var.test_output_bucket}",
-                          "s3prefix" : "${var.stack_name}/",
+                          "s3prefix" : "${var.project_name}/",
                           "WebURL" : "https://master.${var.test_app_domain}",
                           "StatusTable" : "${var.status_table}"
                         },
@@ -777,7 +769,7 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                     "module" : "mod7",
                     "testrun.$" : "$$.Execution.Id",
                     "s3buck" : "${var.test_output_bucket}",
-                    "s3prefix" : "${var.stack_name}/",
+                    "s3prefix" : "${var.project_name}/",
                     "WebURL" : "https://master.${var.test_app_domain}",
                     "StatusTable" : "${var.status_table}"
                   },
@@ -995,8 +987,7 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
   })
 
   tags = {
-    Application = var.stack_id
-    Name        = "SUIT-${var.stack_name}-StateMachine-${var.environment}"
+    Name        = "SUIT-${var.project_name}-StateMachine-${var.environment}"
     Environment = var.environment
     Owner       = var.owner
   }
