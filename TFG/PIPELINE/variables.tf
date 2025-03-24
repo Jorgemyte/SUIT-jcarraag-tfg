@@ -26,3 +26,13 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
+variable "code_pipeline_artifact" {
+  description = "Nombre del bucket de artefactos de CodePipeline"
+  type        = string
+  default     = "CodePipelineArtifact"
+}
+
+variable "approval_topic_arn" {
+  description = "ARN del tópico de SNS para aprobaciones"
+  type        = string
+}

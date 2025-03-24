@@ -269,7 +269,7 @@ resource "aws_cognito_identity_pool_roles_attachment" "attach_cognito_unauth_rol
   }
 }
 
-// ---------------------------- AMPLIFY & ROLES -------------------------------------------------------
+// ---------------------------- AMPLIFY ROLES -------------------------------------------------------
 
 resource "aws_iam_role" "AmplifyAccessRole" {
   name = "SUIT-${var.project_name}-AmplifyRole"
@@ -321,6 +321,8 @@ resource "aws_iam_role_policy_attachment" "AmplifyAccessPolicyAttachment" {
   policy_arn = aws_iam_policy.AmplifyAccessPolicy.arn
 }
 
+// ---------------------------- TEST APP (AMPLIFY) -------------------------------------------------------
+
 resource "aws_amplify_app" "TestApp" {
   name       = "TestAppWebsite"
   repository = "https://git-codecommit.${var.aws.region}.amazonaws.com/v1/repos/${var.repository_name}"
@@ -369,4 +371,339 @@ resource "aws_amplify_branch" "TestAppBranch" {
   tags = {
     Name        = "TestAppBranch"
   }
+}
+
+resource "aws_ssm_parameter" "TestAppDomainParameter" {
+  name        = "TestAppDomain"
+  type        = "String"
+  value       = aws_amplify_app.TestApp.default_domain
+  description = "SSM Parameter for Test App Domain"
+}
+
+// ---------------------------- STATUS PAGE (AMPLIFY) -------------------------------------------------------
+
+resource "aws_amplify_app" "StatusPage" {
+  name       = "StatusPage"
+  repository = "https://git-codecommit.${var.aws_region}.amazonaws.com/v1/repos/${var.repository_name}"
+  build_spec = jsonencode({
+    version = 1
+    applications = [
+      {
+        frontend = {
+          phases = {
+            build = {
+              commands = []
+            }
+          }
+          artifacts = {
+            baseDirectory = "/"
+            files = ["**/*"]
+          }
+          cache = {
+            paths = []
+          }
+          appRoot = "status"
+        }
+      }
+    ]
+  })
+  iam_service_role_arn = aws_iam_role.AmplifyAccessRole.arn
+
+  custom_rule {
+    source = "/<*>"
+    target = "/index.html"
+    status = "404-200"
+  }
+
+  tags = {
+    Name        = "StatusPage"
+  }
+}
+
+resource "aws_amplify_branch" "StatusPageBranch" {
+  app_id          = aws_amplify_app.StatusPage.id
+  branch_name     = "master"
+  description     = "Master branch for Status"
+  enable_auto_build = true
+  stage           = "PRODUCTION"
+
+  tags = {
+    Name        = "StatusPageBranch"
+  }
+}
+
+resource "aws_ssm_parameter" "StatusPageDomainParameter" {
+  name        = "StatusPageDomain"
+  type        = "String"
+  value       = aws_amplify_app.StatusPage.default_domain
+  description = "SSM Parameter for Status Page Domain"
+}
+
+// ---------------------------- CODE BUILD ROLE -------------------------------------------------------
+
+resource "aws_iam_role" "CodeBuildServiceRole" {
+  name = "CodeBuildServiceRole-${var.project_name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "codebuild.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  path = "/"
+}
+
+resource "aws_iam_policy" "CodeBuildServicePolicy" {
+  name = "CodeBuildServiceRole-${var.project_name}-Policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "codecommit:ListBranches",
+          "codecommit:ListRepositories",
+          "codecommit:BatchGetRepositories",
+          "codecommit:Get*",
+          "codecommit:GitPull",
+          "codecommit:GitPush"
+        ]
+        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.project_name}-test-output-${data.aws_caller_identity.current.account_id}-${var.aws_region}/*",
+          "arn:aws:s3:::${var.project_name}-test-output-${data.aws_caller_identity.current.account_id}-${var.aws_region}",
+          "arn:aws:s3:::${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}/*",
+          "arn:aws:s3:::${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}",
+          "arn:aws:s3:::codepipeline-${var.aws_region}-*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "amplify:StartJob"
+        ]
+        Resource = [
+          "arn:aws:amplify:${var.aws_region}:${data.aws_caller_identity.current.account_id}:apps/${aws_amplify_app.TestApp.id}/branches/master/jobs/*",
+          "arn:aws:amplify:${var.aws_region}:${data.aws_caller_identity.current.account_id}:apps/${aws_amplify_app.StatusPage.id}/branches/master/jobs/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:BatchCheckLayerAvailability"
+        ]
+        Resource = aws_ecr_repository.ECRRepository.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole",
+          "ecr:GetAuthorizationToken",
+          "ssm:PutParameter"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "CodeBuildServicePolicyAttachment" {
+  role       = aws_iam_role.CodeBuildServiceRole.name
+  policy_arn = aws_iam_policy.CodeBuildServicePolicy.arn
+}
+
+// ---------------------------- CODE BUILD -------------------------------------------------------
+
+resource "aws_codebuild_project" "BuildContainerProject" {
+  name        = "SUIT-${var.project_name}-BuildContainerProject"
+  description = "Project to build containers and prepare the application"
+  service_role = aws_iam_role.CodeBuildServiceRole.arn
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  environment {
+    type          = "LINUX_CONTAINER"
+    compute_type  = "BUILD_GENERAL1_SMALL"
+    image         = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+    privileged_mode = true
+
+    environment_variable {
+      name  = "AWS_ACCOUNT_ID"
+      value = data.aws_caller_identity.current.account_id
+    }
+
+    environment_variable {
+      name  = "IMAGE_REPO_NAME"
+      value = aws_ecr_repository.ECRRepository.name
+    }
+
+    environment_variable {
+      name  = "Cognito_IDP_ID"
+      value = aws_cognito_identity_pool.StatusPageCognitoIP.id
+    }
+
+    environment_variable {
+      name  = "RepositoryName"
+      value = var.repository_name
+    }
+
+    environment_variable {
+      name  = "DDB_STATUS_TABLE"
+      value = aws_dynamodb_table.StatusTable.name
+    }
+  }
+
+  source {
+    type = "CODEPIPELINE"
+  }
+
+  build_timeout = 15
+
+  cache {
+    type = "LOCAL"
+    modes = ["LOCAL_DOCKER_LAYER_CACHE"]
+  }
+
+  tags = {
+    Name = "SUIT-${var.project_name}-BuildContainerProject"
+  }
+}
+
+// ---------------------------- CODE PIPELINE ROLE -------------------------------------------------------
+
+resource "aws_iam_role" "CodePipelineRole" {
+  name = "SUIT-CodePipelineRole-${var.project_name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "codepipeline.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  path = "/"
+}
+
+resource "aws_iam_policy" "CodePipelinePolicy" {
+  name = "SUIT-CodePipelineRole-${var.project_name}-Policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:DeleteObject",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:ListBucket",
+          "s3:PutObject",
+          "s3:GetBucketPolicy"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.code_pipeline_artifact}",
+          "arn:aws:s3:::${var.code_pipeline_artifact}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codecommit:ListBranches",
+          "codecommit:ListRepositories",
+          "codecommit:BatchGetRepositories",
+          "codecommit:Get*",
+          "codecommit:GitPull",
+          "codecommit:UploadArchive"
+        ]
+        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codebuild:StartBuild",
+          "codebuild:BatchGetBuilds"
+        ]
+        Resource = [
+          aws_codebuild_project.BuildContainerProject.arn,
+          "${aws_codebuild_project.BuildContainerProject.arn}:*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "states:StartExecution",
+          "states:DescribeActivity",
+          "states:DescribeStateMachine",
+          "states:DescribeExecution",
+          "states:CreateActivity",
+          "states:GetExecutionHistory",
+          "states:StartExecution",
+          "states:DeleteActivity",
+          "states:StopExecution",
+          "states:GetActivityTask"
+        ]
+        Resource = [
+          "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:stateMachine:SUIT-*",
+          "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:execution:SUIT-*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = var.approval_topic_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "CodePipelinePolicyAttachment" {
+  role       = aws_iam_role.CodePipelineRole.name
+  policy_arn = aws_iam_policy.CodePipelinePolicy.arn
 }
