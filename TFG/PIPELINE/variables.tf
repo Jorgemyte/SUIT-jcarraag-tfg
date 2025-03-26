@@ -1,9 +1,3 @@
-variable "repository_name" {
-  description = "Enter the name of the GitHub repository"
-  type        = string
-  default     = "SUIT-jcarraag-tfg"
-}
-
 variable "approval_email" {
   description = "Enter the email address to which approval notification needs to be sent"
   type        = string
@@ -34,17 +28,17 @@ variable "code_pipeline_artifact" {
 
 variable "GitHubOwner" {
   description = "Propietario del repositorio de GitHub"
-  type = string
-  default = "Jorgemyte"
+  type        = string
+  default     = "Jorgemyte"
 }
 
 variable "GitHubRepo" {
   description = "Nombre del repositorio de GitHub"
-  type = string
-  default = "SUIT-jcarraag-tfg"
+  type        = string
+  default     = "SUIT-jcarraag-tfg"
 }
 
 variable "GitHubOAuthToken" {
   description = "Token de acceso al repositorio de GitHub"
-  type = string
+  type        = string
 }

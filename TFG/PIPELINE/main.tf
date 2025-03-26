@@ -5,14 +5,15 @@ resource "aws_sns_topic" "approval_topic" {
   kms_master_key_id = "alias/aws/sns"
   display_name      = "SUIT-Approval-Notification"
 
-  /* subscription {
-    endpoint = var.approval_email
-    protocol = "email"
-  } */
-
   tags = {
-    Name        = "${var.project_name}-approval-topic"
+    Name = "${var.project_name}-approval-topic"
   }
+}
+
+resource "aws_sns_topic_subscription" "approval_topic_subscription" {
+  topic_arn = aws_sns_topic.approval_topic.arn
+  protocol  = "email"
+  endpoint  = var.approval_email
 }
 
 // ---------------------------- TEST OUTPUT BUCKET (S3 BUCKET) -------------------------------------------------------
@@ -144,7 +145,7 @@ resource "aws_dynamodb_table" "modules_table" {
   hash_key = "ModId"
 
   tags = {
-    Name        = "ModulesTable-${var.project_name}"
+    Name = "ModulesTable-${var.project_name}"
   }
 }
 
@@ -174,8 +175,29 @@ resource "aws_ssm_parameter" "codepipeline_artifact_parameter" {
 resource "aws_ssm_parameter" "source_repo_parameter" {
   name        = "WebAppSourceRepo"
   type        = "String"
-  value       = var.repository_name
+  value       = var.GitHubRepo
   description = "SSM Parameter for Source Repository"
+}
+
+resource "aws_ssm_parameter" "status_table_parameter" {
+  name        = "StatusTable"
+  type        = "String"
+  value       = aws_dynamodb_table.status_table.name
+  description = "SSM Parameter for Status Table"
+}
+
+resource "aws_ssm_parameter" "TestAppDomainParameter" {
+  name        = "TestAppDomain"
+  type        = "String"
+  value       = aws_amplify_app.TestApp.default_domain
+  description = "SSM Parameter for Test App Domain"
+}
+
+resource "aws_ssm_parameter" "StatusPageDomainParameter" {
+  name        = "StatusPageDomain"
+  type        = "String"
+  value       = aws_amplify_app.StatusPage.default_domain
+  description = "SSM Parameter for Status Page Domain"
 }
 
 // ---------------------------- STATUS TABLE (DynamoDB Table) -------------------------------------------------------
@@ -198,15 +220,8 @@ resource "aws_dynamodb_table" "status_table" {
   range_key = "testcaseid"
 
   tags = {
-    Name        = "StatusTable-${var.project_name}"
+    Name = "StatusTable-${var.project_name}"
   }
-}
-
-resource "aws_ssm_parameter" "status_table_parameter" {
-  name        = "StatusTable"
-  type        = "String"
-  value       = aws_dynamodb_table.status_table.name
-  description = "SSM Parameter for Status Table"
 }
 
 // ---------------------------- COGNITO IDENTITY POOL & ROLES -------------------------------------------------------
@@ -244,8 +259,8 @@ resource "aws_iam_role" "status_page_unauth_role" {
 }
 
 resource "aws_iam_role_policy" "status_page_unauth_policy" {
-  name   = "StatusPageUnAuthRole-${var.project_name}-Policy"
-  role   = aws_iam_role.status_page_unauth_role.id
+  name = "StatusPageUnAuthRole-${var.project_name}-Policy"
+  role = aws_iam_role.status_page_unauth_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -299,13 +314,6 @@ resource "aws_iam_policy" "AmplifyAccessPolicy" {
       {
         Effect = "Allow"
         Action = [
-          "codecommit:GitPull"
-        ]
-        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
-      },
-      {
-        Effect = "Allow"
-        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
@@ -325,7 +333,8 @@ resource "aws_iam_role_policy_attachment" "AmplifyAccessPolicyAttachment" {
 
 resource "aws_amplify_app" "TestApp" {
   name       = "TestAppWebsite"
-  repository = "https://git-codecommit.${var.aws.region}.amazonaws.com/v1/repos/${var.repository_name}"
+  repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
+  oauth_token = var.GitHubOAuthToken
   build_spec = jsonencode({
     version = 1
     applications = [
@@ -338,7 +347,7 @@ resource "aws_amplify_app" "TestApp" {
           }
           artifacts = {
             baseDirectory = "/"
-            files = ["**/*"]
+            files         = ["**/*"]
           }
           cache = {
             paths = []
@@ -357,34 +366,30 @@ resource "aws_amplify_app" "TestApp" {
   }
 
   tags = {
-    Name        = "TestAppWebsite"
+    Name = "TestAppWebsite"
   }
 }
 
 resource "aws_amplify_branch" "TestAppBranch" {
-  app_id          = aws_amplify_app.TestApp.id
-  branch_name     = "master"
-  description     = "Master branch for App"
+  app_id            = aws_amplify_app.TestApp.id
+  branch_name       = "master"
+  description       = "Master branch for App"
   enable_auto_build = true
-  stage           = "PRODUCTION"
+  stage             = "PRODUCTION"
 
   tags = {
-    Name        = "TestAppBranch"
+    Name = "TestAppBranch"
   }
 }
 
-resource "aws_ssm_parameter" "TestAppDomainParameter" {
-  name        = "TestAppDomain"
-  type        = "String"
-  value       = aws_amplify_app.TestApp.default_domain
-  description = "SSM Parameter for Test App Domain"
-}
+
 
 // ---------------------------- STATUS PAGE (AMPLIFY) -------------------------------------------------------
 
 resource "aws_amplify_app" "StatusPage" {
   name       = "StatusPage"
-  repository = "https://git-codecommit.${var.aws_region}.amazonaws.com/v1/repos/${var.repository_name}"
+  repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
+  oauth_token = var.GitHubOAuthToken
   build_spec = jsonencode({
     version = 1
     applications = [
@@ -397,7 +402,7 @@ resource "aws_amplify_app" "StatusPage" {
           }
           artifacts = {
             baseDirectory = "/"
-            files = ["**/*"]
+            files         = ["**/*"]
           }
           cache = {
             paths = []
@@ -416,27 +421,20 @@ resource "aws_amplify_app" "StatusPage" {
   }
 
   tags = {
-    Name        = "StatusPage"
+    Name = "StatusPage"
   }
 }
 
 resource "aws_amplify_branch" "StatusPageBranch" {
-  app_id          = aws_amplify_app.StatusPage.id
-  branch_name     = "master"
-  description     = "Master branch for Status"
+  app_id            = aws_amplify_app.StatusPage.id
+  branch_name       = "master"
+  description       = "Master branch for Status"
   enable_auto_build = true
-  stage           = "PRODUCTION"
+  stage             = "PRODUCTION"
 
   tags = {
-    Name        = "StatusPageBranch"
+    Name = "StatusPageBranch"
   }
-}
-
-resource "aws_ssm_parameter" "StatusPageDomainParameter" {
-  name        = "StatusPageDomain"
-  type        = "String"
-  value       = aws_amplify_app.StatusPage.default_domain
-  description = "SSM Parameter for Status Page Domain"
 }
 
 // ---------------------------- CODE BUILD ROLE -------------------------------------------------------
@@ -466,18 +464,6 @@ resource "aws_iam_policy" "CodeBuildServicePolicy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "codecommit:ListBranches",
-          "codecommit:ListRepositories",
-          "codecommit:BatchGetRepositories",
-          "codecommit:Get*",
-          "codecommit:GitPull",
-          "codecommit:GitPush"
-        ]
-        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
-      },
       {
         Effect = "Allow"
         Action = [
@@ -545,8 +531,8 @@ resource "aws_iam_role_policy_attachment" "CodeBuildServicePolicyAttachment" {
 // ---------------------------- CODE BUILD -------------------------------------------------------
 
 resource "aws_codebuild_project" "BuildContainerProject" {
-  name        = "SUIT-${var.project_name}-BuildContainerProject"
-  description = "Project to build containers and prepare the application"
+  name         = "SUIT-${var.project_name}-BuildContainerProject"
+  description  = "Project to build containers and prepare the application"
   service_role = aws_iam_role.CodeBuildServiceRole.arn
 
   artifacts {
@@ -554,9 +540,9 @@ resource "aws_codebuild_project" "BuildContainerProject" {
   }
 
   environment {
-    type          = "LINUX_CONTAINER"
-    compute_type  = "BUILD_GENERAL1_SMALL"
-    image         = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+    type            = "LINUX_CONTAINER"
+    compute_type    = "BUILD_GENERAL1_SMALL"
+    image           = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
     privileged_mode = true
 
     environment_variable {
@@ -576,7 +562,7 @@ resource "aws_codebuild_project" "BuildContainerProject" {
 
     environment_variable {
       name  = "RepositoryName"
-      value = var.repository_name
+      value = var.GitHubRepo
     }
 
     environment_variable {
@@ -592,7 +578,7 @@ resource "aws_codebuild_project" "BuildContainerProject" {
   build_timeout = 15
 
   cache {
-    type = "LOCAL"
+    type  = "LOCAL"
     modes = ["LOCAL_DOCKER_LAYER_CACHE"]
   }
 
@@ -642,18 +628,6 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
           "arn:aws:s3:::${var.code_pipeline_artifact}",
           "arn:aws:s3:::${var.code_pipeline_artifact}/*"
         ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "codecommit:ListBranches",
-          "codecommit:ListRepositories",
-          "codecommit:BatchGetRepositories",
-          "codecommit:Get*",
-          "codecommit:GitPull",
-          "codecommit:UploadArchive"
-        ]
-        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
       },
       {
         Effect = "Allow"
@@ -773,10 +747,13 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
       output_artifacts = ["TestEnvDeploy"]
 
       configuration = {
-        ActionMode    = "APPLY"
-        RoleArn       = aws_iam_role.TerraformDeployRole.arn
-        StackName     = "${var.project_name}-SUIT-Test-Stack"
-        TemplatePath  = "SUITestSourceOutput::deployment.tf"
+        ActionMode   = "APPLY"
+        RoleArn      = aws_iam_role.TerraformDeployRole.arn
+        TemplatePath = "SUITestSourceOutput::deployment.tf"
+        EnvironmentVariables = jsonencode({
+          AWS_REGION   = var.aws_region
+          PROJECT_NAME = var.project_name
+        })
       }
 
       region    = var.aws_region
@@ -807,11 +784,11 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
     name = "Approval"
 
     action {
-      name      = "DeployApproval"
-      category  = "Approval"
-      owner     = "AWS"
-      provider  = "Manual"
-      version   = "1"
+      name     = "DeployApproval"
+      category = "Approval"
+      owner    = "AWS"
+      provider = "Manual"
+      version  = "1"
 
       configuration = {
         NotificationArn    = aws_sns_topic.approval_topic.arn
@@ -836,10 +813,10 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
       output_artifacts = ["ProdDeploy"]
 
       configuration = {
-        ActionMode    = "APPLY"
-        RoleArn       = aws_iam_role.TerraformDeployRole.arn
-        StackName     = "${var.project_name}-SUIT-Prod-Stack"
-        TemplatePath  = "SUITestSourceOutput::prod-deploy.tf"
+        ActionMode   = "APPLY"
+        RoleArn      = aws_iam_role.TerraformDeployRole.arn
+        StackName    = "${var.project_name}-SUIT-Prod-Stack"
+        TemplatePath = "SUITestSourceOutput::prod-deploy.tf"
       }
 
       region    = var.aws_region
