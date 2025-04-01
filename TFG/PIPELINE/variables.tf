@@ -20,12 +20,6 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
-variable "code_pipeline_artifact" {
-  description = "Nombre del bucket de artefactos de CodePipeline"
-  type        = string
-  default     = "CodePipelineArtifact"
-}
-
 variable "GitHubOwner" {
   description = "Propietario del repositorio de GitHub"
   type        = string

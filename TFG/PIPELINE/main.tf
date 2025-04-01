@@ -437,6 +437,235 @@ resource "aws_amplify_branch" "StatusPageBranch" {
   }
 }
 
+// ---------------------------- TERRAFORM DEPLOY ROLE -------------------------------------------------------
+
+resource "aws_iam_role" "TerraformDeployRole" {
+  name = "${var.project_name}-TerraformDeployRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "codepipeline.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  path = "/"
+}
+
+resource "aws_iam_policy" "TerraformDeployPolicy" {
+  name = "${var.project_name}-TerraformDeployRole-Policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:DeleteSubnet",
+          "ec2:ReplaceRouteTableAssociation",
+          "ec2:DeleteRoute",
+          "ec2:CreateVpc",
+          "ec2:DeleteVpc",
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:CreateRouteTable",
+          "ec2:DeleteRouteTable",
+          "ec2:AttachInternetGateway",
+          "ec2:DetachInternetGateway",
+          "ec2:DisassociateRouteTable",
+          "ec2:AssociateRouteTable",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:CreateRoute",
+          "ec2:CreateInternetGateway",
+          "ec2:RevokeSecurityGroupEgress",
+          "ec2:CreateSubnet",
+          "ec2:CreateTags",
+          "ec2:DeleteTags",
+          "ec2:ModifyVpcAttribute",
+          "ec2:ModifySubnetAttribute",
+          "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+          "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+        ]
+        Resource = "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:CreateInstanceProfile",
+          "iam:DeleteInstanceProfile",
+          "iam:GetRole",
+          "iam:GetPolicy",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:UpdateRoleDescription",
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:AddRoleToInstanceProfile",
+          "iam:PassRole",
+          "iam:CreateServiceLinkedRole",
+          "iam:UpdateRole",
+          "iam:DeleteServiceLinkedRole",
+          "iam:GetRolePolicy",
+          "iam:CreatePolicy",
+          "iam:UpdateAssumeRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:DeletePolicy",
+          "iam:AttachRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:TagPolicy",
+          "iam:UntagPolicy",
+          "iam:TagInstanceProfile",
+          "iam:UntagInstanceProfile"
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:CreateFunction",
+          "lambda:UpdateFunctionEventInvokeConfig",
+          "lambda:TagResource",
+          "lambda:InvokeFunction",
+          "lambda:GetFunction",
+          "lambda:UpdateFunctionConfiguration",
+          "lambda:UntagResource",
+          "lambda:UpdateFunctionCode",
+          "lambda:AddPermission",
+          "lambda:PutFunctionEventInvokeConfig",
+          "lambda:DeleteFunctionEventInvokeConfig",
+          "lambda:DeleteFunction",
+          "lambda:DeleteEventSourceMapping",
+          "lambda:RemovePermission",
+          "lambda:GetFunctionConfiguration",
+          "lambda:ListTags"
+        ]
+        Resource = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeTaskDefinition",
+          "ecs:DeleteCluster",
+          "ecs:TagResource",
+          "ecs:UntagResource"
+        ]
+        Resource = "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/amplify/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:TagResource",
+          "ecr:UntagResource"
+        ]
+        Resource = aws_ecr_repository.ecr_repository.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "states:DeleteStateMachine",
+          "states:UntagResource",
+          "states:TagResource",
+          "states:CreateStateMachine",
+          "states:UpdateStateMachine"
+        ]
+        Resource = "arn:aws:states:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter",
+          "ssm:PutParameter",
+          "ssm:DeleteParameter",
+          "ssm:DeleteParameters",
+          "ssm:AddTagsToResource",
+          "ssm:RemoveTagsFromResource"
+        ]
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:CreateTopic",
+          "sns:DeleteTopic",
+          "sns:Subscribe",
+          "sns:UnSubscribe",
+          "sns:ListTopics"
+        ]
+        Resource = "arn:aws:sns:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "amplify:UntagResource",
+          "amplify:DeleteBranch",
+          "amplify:CreateDeployment",
+          "amplify:CreateBranch",
+          "amplify:UpdateBranch",
+          "amplify:DeleteApp",
+          "amplify:ListBranches",
+          "amplify:GetBranch",
+          "amplify:StartDeployment",
+          "amplify:CreateApp",
+          "amplify:TagResource",
+          "amplify:GetApp",
+          "amplify:UpdateApp"
+        ]
+        Resource = "arn:aws:amplify:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInternetGateways",
+          "ec2:DescribeVpcs",
+          "ec2:DeleteInternetGateway",
+          "ecs:CreateCluster",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSecurityGroupReferences",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeRouteTables",
+          "ecs:DescribeClusters",
+          "ecs:RegisterTaskDefinition",
+          "ecs:DeregisterTaskDefinition",
+          "ssm:DescribeParameters"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "TerraformDeployRoleAttachment" {
+  role       = aws_iam_role.TerraformDeployRole.name
+  policy_arn = aws_iam_policy.TerraformDeployPolicy.arn
+}
+
 // ---------------------------- CODE BUILD ROLE -------------------------------------------------------
 
 resource "aws_iam_role" "CodeBuildServiceRole" {
@@ -546,6 +775,11 @@ resource "aws_codebuild_project" "BuildContainerProject" {
     privileged_mode = true
 
     environment_variable {
+      name  = "AWS_DEFAULT_REGION"
+      value = var.aws_region
+    }
+
+    environment_variable {
       name  = "AWS_ACCOUNT_ID"
       value = data.aws_caller_identity.current.account_id
     }
@@ -569,10 +803,16 @@ resource "aws_codebuild_project" "BuildContainerProject" {
       name  = "DDB_STATUS_TABLE"
       value = aws_dynamodb_table.StatusTable.name
     }
+
+    environment_variable {
+      name  = "GITHUB_USERNAME"
+      value = var.GitHubOwner
+    }
   }
 
   source {
     type = "CODEPIPELINE"
+    buildspec = "buildspec.yml"
   }
 
   build_timeout = 15
@@ -625,8 +865,8 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
           "s3:GetBucketPolicy"
         ]
         Resource = [
-          "arn:aws:s3:::${var.code_pipeline_artifact}",
-          "arn:aws:s3:::${var.code_pipeline_artifact}/*"
+          "arn:aws:s3:::${aws_s3_bucket.codepipeline_artifact.bucket}",
+          "arn:aws:s3:::${aws_s3_bucket.codepipeline_artifact.bucket}/*"
         ]
       },
       {
@@ -826,6 +1066,6 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
   artifact_store {
     type     = "S3"
-    location = var.code_pipeline_artifact
+    location = aws_s3_bucket.codepipeline_artifact.bucket
   }
 }
