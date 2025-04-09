@@ -5,14 +5,15 @@ resource "aws_sns_topic" "approval_topic" {
   kms_master_key_id = "alias/aws/sns"
   display_name      = "SUIT-Approval-Notification"
 
-  /* subscription {
-    endpoint = var.approval_email
-    protocol = "email"
-  } */
-
   tags = {
-    Name        = "${var.project_name}-approval-topic"
+    Name = "${var.project_name}-approval-topic"
   }
+}
+
+resource "aws_sns_topic_subscription" "approval_topic_subscription" {
+  topic_arn = aws_sns_topic.approval_topic.arn
+  protocol  = "email"
+  endpoint  = var.approval_email
 }
 
 // ---------------------------- TEST OUTPUT BUCKET (S3 BUCKET) -------------------------------------------------------
@@ -144,7 +145,7 @@ resource "aws_dynamodb_table" "modules_table" {
   hash_key = "ModId"
 
   tags = {
-    Name        = "ModulesTable-${var.project_name}"
+    Name = "ModulesTable-${var.project_name}"
   }
 }
 
@@ -174,8 +175,29 @@ resource "aws_ssm_parameter" "codepipeline_artifact_parameter" {
 resource "aws_ssm_parameter" "source_repo_parameter" {
   name        = "WebAppSourceRepo"
   type        = "String"
-  value       = var.repository_name
+  value       = var.GitHubRepo
   description = "SSM Parameter for Source Repository"
+}
+
+resource "aws_ssm_parameter" "status_table_parameter" {
+  name        = "StatusTable"
+  type        = "String"
+  value       = aws_dynamodb_table.status_table.name
+  description = "SSM Parameter for Status Table"
+}
+
+resource "aws_ssm_parameter" "TestAppDomainParameter" {
+  name        = "TestAppDomain"
+  type        = "String"
+  value       = aws_amplify_app.TestApp.default_domain
+  description = "SSM Parameter for Test App Domain"
+}
+
+resource "aws_ssm_parameter" "StatusPageDomainParameter" {
+  name        = "StatusPageDomain"
+  type        = "String"
+  value       = aws_amplify_app.StatusPage.default_domain
+  description = "SSM Parameter for Status Page Domain"
 }
 
 // ---------------------------- STATUS TABLE (DynamoDB Table) -------------------------------------------------------
@@ -198,15 +220,8 @@ resource "aws_dynamodb_table" "status_table" {
   range_key = "testcaseid"
 
   tags = {
-    Name        = "StatusTable-${var.project_name}"
+    Name = "StatusTable-${var.project_name}"
   }
-}
-
-resource "aws_ssm_parameter" "status_table_parameter" {
-  name        = "StatusTable"
-  type        = "String"
-  value       = aws_dynamodb_table.status_table.name
-  description = "SSM Parameter for Status Table"
 }
 
 // ---------------------------- COGNITO IDENTITY POOL & ROLES -------------------------------------------------------
@@ -244,8 +259,8 @@ resource "aws_iam_role" "status_page_unauth_role" {
 }
 
 resource "aws_iam_role_policy" "status_page_unauth_policy" {
-  name   = "StatusPageUnAuthRole-${var.project_name}-Policy"
-  role   = aws_iam_role.status_page_unauth_role.id
+  name = "StatusPageUnAuthRole-${var.project_name}-Policy"
+  role = aws_iam_role.status_page_unauth_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -299,13 +314,6 @@ resource "aws_iam_policy" "AmplifyAccessPolicy" {
       {
         Effect = "Allow"
         Action = [
-          "codecommit:GitPull"
-        ]
-        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
-      },
-      {
-        Effect = "Allow"
-        Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
@@ -325,7 +333,8 @@ resource "aws_iam_role_policy_attachment" "AmplifyAccessPolicyAttachment" {
 
 resource "aws_amplify_app" "TestApp" {
   name       = "TestAppWebsite"
-  repository = "https://git-codecommit.${var.aws.region}.amazonaws.com/v1/repos/${var.repository_name}"
+  repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
+  oauth_token = var.GitHubOAuthToken
   build_spec = jsonencode({
     version = 1
     applications = [
@@ -338,7 +347,7 @@ resource "aws_amplify_app" "TestApp" {
           }
           artifacts = {
             baseDirectory = "/"
-            files = ["**/*"]
+            files         = ["**/*"]
           }
           cache = {
             paths = []
@@ -357,34 +366,30 @@ resource "aws_amplify_app" "TestApp" {
   }
 
   tags = {
-    Name        = "TestAppWebsite"
+    Name = "TestAppWebsite"
   }
 }
 
 resource "aws_amplify_branch" "TestAppBranch" {
-  app_id          = aws_amplify_app.TestApp.id
-  branch_name     = "master"
-  description     = "Master branch for App"
+  app_id            = aws_amplify_app.TestApp.id
+  branch_name       = "master"
+  description       = "Master branch for App"
   enable_auto_build = true
-  stage           = "PRODUCTION"
+  stage             = "PRODUCTION"
 
   tags = {
-    Name        = "TestAppBranch"
+    Name = "TestAppBranch"
   }
 }
 
-resource "aws_ssm_parameter" "TestAppDomainParameter" {
-  name        = "TestAppDomain"
-  type        = "String"
-  value       = aws_amplify_app.TestApp.default_domain
-  description = "SSM Parameter for Test App Domain"
-}
+
 
 // ---------------------------- STATUS PAGE (AMPLIFY) -------------------------------------------------------
 
 resource "aws_amplify_app" "StatusPage" {
   name       = "StatusPage"
-  repository = "https://git-codecommit.${var.aws_region}.amazonaws.com/v1/repos/${var.repository_name}"
+  repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
+  oauth_token = var.GitHubOAuthToken
   build_spec = jsonencode({
     version = 1
     applications = [
@@ -397,7 +402,7 @@ resource "aws_amplify_app" "StatusPage" {
           }
           artifacts = {
             baseDirectory = "/"
-            files = ["**/*"]
+            files         = ["**/*"]
           }
           cache = {
             paths = []
@@ -416,27 +421,249 @@ resource "aws_amplify_app" "StatusPage" {
   }
 
   tags = {
-    Name        = "StatusPage"
+    Name = "StatusPage"
   }
 }
 
 resource "aws_amplify_branch" "StatusPageBranch" {
-  app_id          = aws_amplify_app.StatusPage.id
-  branch_name     = "master"
-  description     = "Master branch for Status"
+  app_id            = aws_amplify_app.StatusPage.id
+  branch_name       = "master"
+  description       = "Master branch for Status"
   enable_auto_build = true
-  stage           = "PRODUCTION"
+  stage             = "PRODUCTION"
 
   tags = {
-    Name        = "StatusPageBranch"
+    Name = "StatusPageBranch"
   }
 }
 
-resource "aws_ssm_parameter" "StatusPageDomainParameter" {
-  name        = "StatusPageDomain"
-  type        = "String"
-  value       = aws_amplify_app.StatusPage.default_domain
-  description = "SSM Parameter for Status Page Domain"
+// ---------------------------- TERRAFORM DEPLOY ROLE -------------------------------------------------------
+
+resource "aws_iam_role" "TerraformDeployRole" {
+  name = "${var.project_name}-TerraformDeployRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "codepipeline.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  path = "/"
+}
+
+resource "aws_iam_policy" "TerraformDeployPolicy" {
+  name = "${var.project_name}-TerraformDeployRole-Policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:DeleteSubnet",
+          "ec2:ReplaceRouteTableAssociation",
+          "ec2:DeleteRoute",
+          "ec2:CreateVpc",
+          "ec2:DeleteVpc",
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:CreateRouteTable",
+          "ec2:DeleteRouteTable",
+          "ec2:AttachInternetGateway",
+          "ec2:DetachInternetGateway",
+          "ec2:DisassociateRouteTable",
+          "ec2:AssociateRouteTable",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:CreateRoute",
+          "ec2:CreateInternetGateway",
+          "ec2:RevokeSecurityGroupEgress",
+          "ec2:CreateSubnet",
+          "ec2:CreateTags",
+          "ec2:DeleteTags",
+          "ec2:ModifyVpcAttribute",
+          "ec2:ModifySubnetAttribute",
+          "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+          "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+        ]
+        Resource = "arn:aws:ec2:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:CreateInstanceProfile",
+          "iam:DeleteInstanceProfile",
+          "iam:GetRole",
+          "iam:GetPolicy",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:UpdateRoleDescription",
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:AddRoleToInstanceProfile",
+          "iam:PassRole",
+          "iam:CreateServiceLinkedRole",
+          "iam:UpdateRole",
+          "iam:DeleteServiceLinkedRole",
+          "iam:GetRolePolicy",
+          "iam:CreatePolicy",
+          "iam:UpdateAssumeRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:DeletePolicy",
+          "iam:AttachRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:TagPolicy",
+          "iam:UntagPolicy",
+          "iam:TagInstanceProfile",
+          "iam:UntagInstanceProfile"
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:CreateFunction",
+          "lambda:UpdateFunctionEventInvokeConfig",
+          "lambda:TagResource",
+          "lambda:InvokeFunction",
+          "lambda:GetFunction",
+          "lambda:UpdateFunctionConfiguration",
+          "lambda:UntagResource",
+          "lambda:UpdateFunctionCode",
+          "lambda:AddPermission",
+          "lambda:PutFunctionEventInvokeConfig",
+          "lambda:DeleteFunctionEventInvokeConfig",
+          "lambda:DeleteFunction",
+          "lambda:DeleteEventSourceMapping",
+          "lambda:RemovePermission",
+          "lambda:GetFunctionConfiguration",
+          "lambda:ListTags"
+        ]
+        Resource = "arn:aws:lambda:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:function:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeTaskDefinition",
+          "ecs:DeleteCluster",
+          "ecs:TagResource",
+          "ecs:UntagResource"
+        ]
+        Resource = "arn:aws:ecs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/amplify/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:TagResource",
+          "ecr:UntagResource"
+        ]
+        Resource = aws_ecr_repository.ecr_repository.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "states:DeleteStateMachine",
+          "states:UntagResource",
+          "states:TagResource",
+          "states:CreateStateMachine",
+          "states:UpdateStateMachine"
+        ]
+        Resource = "arn:aws:states:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter",
+          "ssm:PutParameter",
+          "ssm:DeleteParameter",
+          "ssm:DeleteParameters",
+          "ssm:AddTagsToResource",
+          "ssm:RemoveTagsFromResource"
+        ]
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:CreateTopic",
+          "sns:DeleteTopic",
+          "sns:Subscribe",
+          "sns:UnSubscribe",
+          "sns:ListTopics"
+        ]
+        Resource = "arn:aws:sns:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "amplify:UntagResource",
+          "amplify:DeleteBranch",
+          "amplify:CreateDeployment",
+          "amplify:CreateBranch",
+          "amplify:UpdateBranch",
+          "amplify:DeleteApp",
+          "amplify:ListBranches",
+          "amplify:GetBranch",
+          "amplify:StartDeployment",
+          "amplify:CreateApp",
+          "amplify:TagResource",
+          "amplify:GetApp",
+          "amplify:UpdateApp"
+        ]
+        Resource = "arn:aws:amplify:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInternetGateways",
+          "ec2:DescribeVpcs",
+          "ec2:DeleteInternetGateway",
+          "ecs:CreateCluster",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSecurityGroupReferences",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeRouteTables",
+          "ecs:DescribeClusters",
+          "ecs:RegisterTaskDefinition",
+          "ecs:DeregisterTaskDefinition",
+          "ssm:DescribeParameters"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "TerraformDeployRoleAttachment" {
+  role       = aws_iam_role.TerraformDeployRole.name
+  policy_arn = aws_iam_policy.TerraformDeployPolicy.arn
 }
 
 // ---------------------------- CODE BUILD ROLE -------------------------------------------------------
@@ -466,18 +693,6 @@ resource "aws_iam_policy" "CodeBuildServicePolicy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "codecommit:ListBranches",
-          "codecommit:ListRepositories",
-          "codecommit:BatchGetRepositories",
-          "codecommit:Get*",
-          "codecommit:GitPull",
-          "codecommit:GitPush"
-        ]
-        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
-      },
       {
         Effect = "Allow"
         Action = [
@@ -545,8 +760,8 @@ resource "aws_iam_role_policy_attachment" "CodeBuildServicePolicyAttachment" {
 // ---------------------------- CODE BUILD -------------------------------------------------------
 
 resource "aws_codebuild_project" "BuildContainerProject" {
-  name        = "SUIT-${var.project_name}-BuildContainerProject"
-  description = "Project to build containers and prepare the application"
+  name         = "SUIT-${var.project_name}-BuildContainerProject"
+  description  = "Project to build containers and prepare the application"
   service_role = aws_iam_role.CodeBuildServiceRole.arn
 
   artifacts {
@@ -554,10 +769,15 @@ resource "aws_codebuild_project" "BuildContainerProject" {
   }
 
   environment {
-    type          = "LINUX_CONTAINER"
-    compute_type  = "BUILD_GENERAL1_SMALL"
-    image         = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
+    type            = "LINUX_CONTAINER"
+    compute_type    = "BUILD_GENERAL1_SMALL"
+    image           = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
     privileged_mode = true
+
+    environment_variable {
+      name  = "AWS_DEFAULT_REGION"
+      value = var.aws_region
+    }
 
     environment_variable {
       name  = "AWS_ACCOUNT_ID"
@@ -576,23 +796,29 @@ resource "aws_codebuild_project" "BuildContainerProject" {
 
     environment_variable {
       name  = "RepositoryName"
-      value = var.repository_name
+      value = var.GitHubRepo
     }
 
     environment_variable {
       name  = "DDB_STATUS_TABLE"
       value = aws_dynamodb_table.StatusTable.name
     }
+
+    environment_variable {
+      name  = "GITHUB_USERNAME"
+      value = var.GitHubOwner
+    }
   }
 
   source {
     type = "CODEPIPELINE"
+    buildspec = "buildspec.yml"
   }
 
   build_timeout = 15
 
   cache {
-    type = "LOCAL"
+    type  = "LOCAL"
     modes = ["LOCAL_DOCKER_LAYER_CACHE"]
   }
 
@@ -639,21 +865,9 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
           "s3:GetBucketPolicy"
         ]
         Resource = [
-          "arn:aws:s3:::${var.code_pipeline_artifact}",
-          "arn:aws:s3:::${var.code_pipeline_artifact}/*"
+          "arn:aws:s3:::${aws_s3_bucket.codepipeline_artifact.bucket}",
+          "arn:aws:s3:::${aws_s3_bucket.codepipeline_artifact.bucket}/*"
         ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "codecommit:ListBranches",
-          "codecommit:ListRepositories",
-          "codecommit:BatchGetRepositories",
-          "codecommit:Get*",
-          "codecommit:GitPull",
-          "codecommit:UploadArchive"
-        ]
-        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
       },
       {
         Effect = "Allow"
@@ -690,7 +904,7 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
         Action = [
           "sns:Publish"
         ]
-        Resource = var.approval_topic_arn
+        Resource = aws_sns_topic.approval_topic.arn
       },
       {
         Effect = "Allow"
@@ -706,4 +920,152 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
 resource "aws_iam_role_policy_attachment" "CodePipelinePolicyAttachment" {
   role       = aws_iam_role.CodePipelineRole.name
   policy_arn = aws_iam_policy.CodePipelinePolicy.arn
+}
+
+// ---------------------------- CODE PIPELINE -------------------------------------------------------
+
+data "aws_secretsmanager_secret_version" "github_token" {
+  secret_id = "aws-jcarraag-GitHub"
+}
+
+resource "aws_codepipeline" "ServerlessUITestPipeline" {
+  name     = "${var.project_name}-ServerlessUITestPipeline"
+  role_arn = aws_iam_role.CodePipelineRole.arn
+
+  stage {
+    name = "Source"
+
+    action {
+      name             = "SUITestSource"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "GitHub"
+      version          = "1"
+      output_artifacts = ["SUITestSourceOutput"]
+
+      configuration = {
+        Owner      = var.GitHubOwner
+        Repo       = var.GitHubRepo
+        Branch     = "TFG"
+        OAuthToken = data.aws_secretsmanager_secret_version.github_token.secret_string
+      }
+
+      run_order = 1
+    }
+  }
+
+  stage {
+    name = "Build"
+
+    action {
+      name             = "BuildContainer"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      input_artifacts  = ["SUITestSourceOutput"]
+      output_artifacts = ["BuildContainerArtifact"]
+
+      configuration = {
+        ProjectName = aws_codebuild_project.BuildContainerProject.name
+      }
+
+      run_order = 1
+    }
+  }
+
+  stage {
+    name = "Test"
+
+    action {
+      name             = "DeployTestEnv"
+      category         = "Deploy"
+      owner            = "AWS"
+      provider         = "Terraform"
+      version          = "1"
+      input_artifacts  = ["SUITestSourceOutput"]
+      output_artifacts = ["TestEnvDeploy"]
+
+      configuration = {
+        ActionMode   = "APPLY"
+        RoleArn      = aws_iam_role.TerraformDeployRole.arn
+        TemplatePath = "SUITestSourceOutput::deployment.tf"
+        EnvironmentVariables = jsonencode({
+          AWS_REGION   = var.aws_region
+          PROJECT_NAME = var.project_name
+        })
+      }
+
+      region    = var.aws_region
+      run_order = 1
+    }
+
+    action {
+      name             = "Run-Mod1-Test"
+      category         = "Invoke"
+      owner            = "AWS"
+      provider         = "StepFunctions"
+      version          = "1"
+      input_artifacts  = ["TestEnvDeploy"]
+      output_artifacts = ["Mod1TestOut"]
+
+      configuration = {
+        ExecutionNamePrefix = "suit"
+        Input               = "{\"DDBKey\":{\"ModId\":{\"S\":\"mod1\"}}}"
+        StateMachineArn     = "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:stateMachine:SUIT-StateMachine"
+      }
+
+      region    = var.aws_region
+      run_order = 2
+    }
+  }
+
+  stage {
+    name = "Approval"
+
+    action {
+      name     = "DeployApproval"
+      category = "Approval"
+      owner    = "AWS"
+      provider = "Manual"
+      version  = "1"
+
+      configuration = {
+        NotificationArn    = aws_sns_topic.approval_topic.arn
+        ExternalEntityLink = "https://master.${aws_amplify_app.StatusPage.default_domain}/?earn=#{TestVariables.ExecutionArn}"
+        CustomData         = "Approve production deployment after validating the test status."
+      }
+
+      run_order = 1
+    }
+  }
+
+  stage {
+    name = "ProdDeploy"
+
+    action {
+      name             = "DeployProd"
+      category         = "Deploy"
+      owner            = "AWS"
+      provider         = "Terraform"
+      version          = "1"
+      input_artifacts  = ["SUITestSourceOutput"]
+      output_artifacts = ["ProdDeploy"]
+
+      configuration = {
+        ActionMode   = "APPLY"
+        RoleArn      = aws_iam_role.TerraformDeployRole.arn
+        StackName    = "${var.project_name}-SUIT-Prod-Stack"
+        TemplatePath = "SUITestSourceOutput::prod-deploy.tf"
+      }
+
+      region    = var.aws_region
+      run_order = 1
+    }
+  }
+
+  artifact_store {
+    type     = "S3"
+    location = aws_s3_bucket.codepipeline_artifact.bucket
+  }
 }

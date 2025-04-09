@@ -1,9 +1,3 @@
-variable "repository_name" {
-  description = "Enter the name of the GitHub repository"
-  type        = string
-  default     = "SUIT-jcarraag-tfg"
-}
-
 variable "approval_email" {
   description = "Enter the email address to which approval notification needs to be sent"
   type        = string
@@ -26,13 +20,19 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
-variable "code_pipeline_artifact" {
-  description = "Nombre del bucket de artefactos de CodePipeline"
+variable "GitHubOwner" {
+  description = "Propietario del repositorio de GitHub"
   type        = string
-  default     = "CodePipelineArtifact"
+  default     = "Jorgemyte"
 }
 
-variable "approval_topic_arn" {
-  description = "ARN del tópico de SNS para aprobaciones"
+variable "GitHubRepo" {
+  description = "Nombre del repositorio de GitHub"
+  type        = string
+  default     = "SUIT-jcarraag-tfg"
+}
+
+variable "GitHubOAuthToken" {
+  description = "Token de acceso al repositorio de GitHub"
   type        = string
 }
