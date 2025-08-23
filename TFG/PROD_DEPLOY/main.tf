@@ -87,8 +87,8 @@ resource "aws_amplify_app" "ProdApp" {
 
 resource "aws_amplify_branch" "ProdAppBranch" {
   app_id          = aws_amplify_app.ProdApp.id
-  branch_name     = "master"
-  description     = "Master branch for App"
+  branch_name       = "master"
+  description       = "Master branch for App"
   enable_auto_build = true
   stage           = "PRODUCTION"
 

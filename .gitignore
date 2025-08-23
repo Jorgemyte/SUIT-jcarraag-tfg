@@ -53,6 +53,8 @@ terraform.rc
 # Archivos de configuración de editores
 *.vscode/
 *.idea/
+
+Memoria TFG plantilla/
 =======
 .terraform.lock.hcl
 >>>>>>> 5c22c6c (gitignore y prueba)

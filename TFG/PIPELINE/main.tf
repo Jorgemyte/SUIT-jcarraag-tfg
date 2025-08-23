@@ -724,8 +724,8 @@ resource "aws_iam_policy" "CodeBuildServicePolicy" {
           "amplify:StartJob"
         ]
         Resource = [
-          "arn:aws:amplify:${var.aws_region}:${data.aws_caller_identity.current.account_id}:apps/${aws_amplify_app.TestApp.id}/branches/master/jobs/*",
-          "arn:aws:amplify:${var.aws_region}:${data.aws_caller_identity.current.account_id}:apps/${aws_amplify_app.StatusPage.id}/branches/master/jobs/*"
+          "arn:aws:amplify:${var.aws_region}:${data.aws_caller_identity.current.account_id}:apps/${aws_amplify_app.TestApp.id}/branches/${aws_amplify_branch.TestAppBranch.branch_name}/jobs/*",
+          "arn:aws:amplify:${var.aws_region}:${data.aws_caller_identity.current.account_id}:apps/${aws_amplify_app.StatusPage.id}/branches/${aws_amplify_branch.StatusPageBranch.branch_name}/jobs/*"
         ]
       },
       {
@@ -925,7 +925,7 @@ resource "aws_iam_role_policy_attachment" "CodePipelinePolicyAttachment" {
 // ---------------------------- CODE PIPELINE -------------------------------------------------------
 
 data "aws_secretsmanager_secret_version" "github_token" {
-  secret_id = "aws-jcarraag-GitHub"
+  secret_id = "jcarraag_GitHubOAuthToken"
 }
 
 resource "aws_codepipeline" "ServerlessUITestPipeline" {
@@ -946,7 +946,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
       configuration = {
         Owner      = var.GitHubOwner
         Repo       = var.GitHubRepo
-        Branch     = "TFG"
+        Branch     = "master"
         OAuthToken = data.aws_secretsmanager_secret_version.github_token.secret_string
       }
 
@@ -1032,7 +1032,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
       configuration = {
         NotificationArn    = aws_sns_topic.approval_topic.arn
-        ExternalEntityLink = "https://master.${aws_amplify_app.StatusPage.default_domain}/?earn=#{TestVariables.ExecutionArn}"
+        ExternalEntityLink = "https://${aws_amplify_app.StatusPageBranch.branch_name}.${aws_amplify_app.StatusPage.default_domain}/?earn=#{TestVariables.ExecutionArn}"
         CustomData         = "Approve production deployment after validating the test status."
       }
 
