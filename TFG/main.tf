@@ -1034,7 +1034,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
       configuration = {
         NotificationArn    = aws_sns_topic.approval_topic.arn
-        ExternalEntityLink = "https://${aws_amplify_app.StatusPageBranch.branch_name}.${aws_amplify_app.StatusPage.default_domain}/?earn=#{TestVariables.ExecutionArn}"
+        ExternalEntityLink = "https://${aws_amplify_branch.StatusPageBranch.branch_name}.${aws_amplify_app.StatusPage.default_domain}/?earn=#{TestVariables.ExecutionArn}"
         CustomData         = "Approve production deployment after validating the test status."
       }
 
