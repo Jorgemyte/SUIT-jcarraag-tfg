@@ -19,3 +19,25 @@ variable "vpc_cidr" {
   description = "Bloque CIDR de la VPC"
   type        = string
 }
+
+variable "approval_email" {
+  description = "Enter the email address to which approval notification needs to be sent"
+  type        = string
+  default     = "jcarraag@emeal.nttdata.com"
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$", var.approval_email))
+    error_message = "Expects a valid email address"
+  }
+}
+
+variable "GitHubOwner" {
+  description = "Propietario del repositorio de GitHub"
+  type        = string
+  default     = "Jorgemyte"
+}
+
+variable "GitHubRepo" {
+  description = "Nombre del repositorio de GitHub"
+  type        = string
+  default     = "SUIT-jcarraag-tfg"
+}
