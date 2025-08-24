@@ -334,7 +334,7 @@ resource "aws_iam_role_policy_attachment" "AmplifyAccessPolicyAttachment" {
 resource "aws_amplify_app" "TestApp" {
   name       = "TestAppWebsite"
   repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
-  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
+  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token "]
 // data.aws_secretsmanager_secret_version.github_token.secret_string
   build_spec = jsonencode({
     version = 1
@@ -390,7 +390,7 @@ resource "aws_amplify_branch" "TestAppBranch" {
 resource "aws_amplify_app" "StatusPage" {
   name       = "StatusPage"
   repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
-  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
+  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token "]
 // data.aws_secretsmanager_secret_version.github_token.secret_string
   build_spec = jsonencode({
     version = 1
@@ -951,7 +951,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
         Owner      = var.GitHubOwner
         Repo       = var.GitHubRepo
         Branch     = "master"
-        OAuthToken = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
+        OAuthToken = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token "]
 // data.aws_secretsmanager_secret_version.github_token.secret_string
       }
 
