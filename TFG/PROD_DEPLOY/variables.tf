@@ -15,3 +15,15 @@ variable "aws_region" {
   type        = string
   default     = "eu-central-1"
 }
+
+variable "GitHubOwner" {
+  description = "Propietario del repositorio de GitHub"
+  type        = string
+  default     = "Jorgemyte"
+}
+
+variable "GitHubRepo" {
+  description = "Nombre del repositorio de GitHub"
+  type        = string
+  default     = "SUIT-jcarraag-tfg"
+}

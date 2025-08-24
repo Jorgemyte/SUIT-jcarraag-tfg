@@ -29,11 +29,6 @@ resource "aws_iam_policy" "AmplifyAccessRolePolicy" {
     Statement = [
       {
         Effect = "Allow"
-        Action = "codecommit:GitPull"
-        Resource = "arn:aws:codecommit:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.repository_name}"
-      },
-      {
-        Effect = "Allow"
         Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
@@ -52,24 +47,35 @@ resource "aws_iam_role_policy_attachment" "AmplifyAccessRolePolicyAttachment" {
 
 // ---------------------------- AMPLIFY -------------------------------------------------------
 
+data "aws_secretsmanager_secret_version" "github_token" {
+  secret_id = "jcarraag_GitHubOAuthToken"
+}
 resource "aws_amplify_app" "ProdApp" {
   name        = "ProdAppWebsite"
-  repository  = "https://git-codecommit.${var.aws_region}.amazonaws.com/v1/repos/${var.repository_name}"
-  build_spec  = <<BUILD_SPEC
-    version: 1
-    applications:
-      - frontend:
-          phases:
-            build:
-              commands: []
-          artifacts:
-            baseDirectory: /
-            files:
-              - '**/*'
-          cache:
-            paths: []
-          appRoot: website
-    BUILD_SPEC
+  repository  = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
+  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
+  build_spec = jsonencode({
+    version = 1
+    applications = [
+      {
+        frontend = {
+          phases = {
+            build = {
+              commands = []
+            }
+          }
+          artifacts = {
+            baseDirectory = "/"
+            files         = ["**/*"]
+          }
+          cache = {
+            paths = []
+          }
+          appRoot = "website"
+        }
+      }
+    ]
+  })
 
   iam_service_role_arn = aws_iam_role.AmplifyAccessRole.arn
 

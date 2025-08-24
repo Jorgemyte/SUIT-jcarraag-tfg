@@ -418,6 +418,7 @@ resource "aws_amplify_app" "StatusPage" {
       }
     ]
   })
+  
   iam_service_role_arn = aws_iam_role.AmplifyAccessRole.arn
 
   custom_rule {
@@ -674,7 +675,7 @@ resource "aws_iam_role_policy_attachment" "TerraformDeployRoleAttachment" {
   policy_arn = aws_iam_policy.TerraformDeployPolicy.arn
 }
 
-// ---------------------------- CODE BUILD ROLE -------------------------------------------------------
+// ---------------------------- CODE BUILD CONTAINER ROLE -------------------------------------------------------
 
 resource "aws_iam_role" "CodeBuildServiceRole" {
   name = "CodeBuildServiceRole-${var.project_name}"
@@ -765,7 +766,7 @@ resource "aws_iam_role_policy_attachment" "CodeBuildServicePolicyAttachment" {
   policy_arn = aws_iam_policy.CodeBuildServicePolicy.arn
 }
 
-// ---------------------------- CODE BUILD -------------------------------------------------------
+// ---------------------------- CODE BUILD CONTAINER -------------------------------------------------------
 
 resource "aws_codebuild_project" "BuildContainerProject" {
   name         = "SUIT-${var.project_name}-BuildContainerProject"
@@ -832,6 +833,114 @@ resource "aws_codebuild_project" "BuildContainerProject" {
 
   tags = {
     Name = "SUIT-${var.project_name}-BuildContainerProject"
+  }
+}
+
+// ---------------------------- CODE BUILD TERRAFORM DEPLOY ROLE -----------------------------------------
+
+resource "aws_iam_role" "TerraformCodeBuildRole" {
+  name = "TerraformCodeBuildRole-${var.project_name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "codebuild.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  path = "/"
+}
+
+resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
+  name = "TerraformCodeBuildRole-${var.project_name}-Policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:GetObjectVersion",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.project_name}-test-output-${data.aws_caller_identity.current.account_id}-${var.aws_region}",
+          "arn:aws:s3:::${var.project_name}-test-output-${data.aws_caller_identity.current.account_id}-${var.aws_region}/*",
+          "arn:aws:s3:::${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}",
+          "arn:aws:s3:::${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}/*",
+          "arn:aws:s3:::codepipeline-${var.aws_region}-*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:PutParameter"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole",
+          "iam:GetRole"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "TerraformCodeBuildPolicyAttachment" {
+  role       = aws_iam_role.TerraformCodeBuildRole.name
+  policy_arn = aws_iam_policy.TerraformCodeBuildPolicy.arn
+}
+
+// ---------------------------- CODE BUILD TERRAFORM DEPLOY ----------------------------------------------
+
+resource "aws_codebuild_project" "TerraformDeployProject" {
+  name          = "SUIT-${var.project_name}-TerraformDeploy"
+  description   = "Ejecuta Terraform desde CodePipeline"
+  service_role  = aws_iam_role.CodeBuildServiceRole.arn
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "hashicorp/terraform:1.5.7" # o usa una imagen personalizada con Terraform
+    type                        = "LINUX_CONTAINER"
+    environment_variable {
+      name  = "AWS_REGION"
+      value = var.aws_region
+    }
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = "terraform-buildspec.yml"
+  }
+
+  tags = {
+    Name = "SUIT-${var.project_name}-TerraformDeploy"
   }
 }
 
@@ -994,24 +1103,16 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
     action {
       name             = "DeployTestEnv"
-      category         = "Deploy"
+      category         = "Build"
       owner            = "AWS"
-      provider         = "Terraform"
+      provider         = "CodeBuild"
       version          = "1"
       input_artifacts  = ["SUITestSourceOutput"]
       output_artifacts = ["TestEnvDeploy"]
-
       configuration = {
-        ActionMode   = "APPLY"
-        RoleArn      = aws_iam_role.TerraformDeployRole.arn
-        TemplatePath = "SUITestSourceOutput::DEPLOYMENT/main.tf"
-        EnvironmentVariables = jsonencode({
-          AWS_REGION   = var.aws_region
-          PROJECT_NAME = var.project_name
-        })
+        ProjectName = aws_codebuild_project.TerraformDeployProject.name
       }
 
-      region    = var.aws_region
       run_order = 1
     }
 
