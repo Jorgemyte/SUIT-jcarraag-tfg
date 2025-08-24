@@ -33,10 +33,12 @@ resource "aws_s3_bucket" "test_output_bucket" {
   }
 }
 
+/* NO NECESARIA A PARTIR DE 2023
 resource "aws_s3_bucket_acl" "test_output_bucket_acl" {
   bucket = aws_s3_bucket.test_output_bucket.id
   acl    = "private"
 }
+*/
 
 resource "aws_s3_bucket_versioning" "test_output_bucket_versioning" {
   bucket = aws_s3_bucket.test_output_bucket.id
@@ -71,10 +73,12 @@ resource "aws_s3_bucket" "codepipeline_artifact" {
   }
 }
 
+/* NO NECESARIA A PARTIR DE 2023
 resource "aws_s3_bucket_acl" "codepipeline_artifact_acl" {
   bucket = aws_s3_bucket.codepipeline_artifact.id
   acl    = "private"
 }
+*/
 
 resource "aws_s3_bucket_versioning" "codepipeline_artifact_versioning" {
   bucket = aws_s3_bucket.codepipeline_artifact.id
@@ -334,7 +338,7 @@ resource "aws_iam_role_policy_attachment" "AmplifyAccessPolicyAttachment" {
 resource "aws_amplify_app" "TestApp" {
   name       = "TestAppWebsite"
   repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
-  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token "]
+  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
 // data.aws_secretsmanager_secret_version.github_token.secret_string
   build_spec = jsonencode({
     version = 1
@@ -390,7 +394,7 @@ resource "aws_amplify_branch" "TestAppBranch" {
 resource "aws_amplify_app" "StatusPage" {
   name       = "StatusPage"
   repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
-  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token "]
+  oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
 // data.aws_secretsmanager_secret_version.github_token.secret_string
   build_spec = jsonencode({
     version = 1
@@ -951,7 +955,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
         Owner      = var.GitHubOwner
         Repo       = var.GitHubRepo
         Branch     = "master"
-        OAuthToken = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token "]
+        OAuthToken = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
 // data.aws_secretsmanager_secret_version.github_token.secret_string
       }
 
