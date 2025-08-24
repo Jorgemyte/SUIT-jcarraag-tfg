@@ -41,3 +41,9 @@ variable "GitHubRepo" {
   type        = string
   default     = "SUIT-jcarraag-tfg"
 }
+
+variable "codeconnection_arn" {
+  description = "ARN de la conexión CodeConnections con GitHub"
+  type        = string
+  default     = "arn:aws:codeconnections:eu-central-1:864981728359:connection/b75500fb-f74e-46f7-8096-cb223b4386b0"
+}

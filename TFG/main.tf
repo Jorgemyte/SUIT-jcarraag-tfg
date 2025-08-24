@@ -920,6 +920,13 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
           "iam:PassRole"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "codeconnections:UseConnection"
+        ]
+        Resource = var.codeconnection_arn
       }
     ]
   })
@@ -947,16 +954,15 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
       name             = "SUITestSource"
       category         = "Source"
       owner            = "AWS"
-      provider         = "GitHub"
+      provider         = "CodeStarSourceConnection"
       version          = "1"
       output_artifacts = ["SUITestSourceOutput"]
 
       configuration = {
-        Owner      = var.GitHubOwner
-        Repo       = var.GitHubRepo
-        Branch     = "master"
-        OAuthToken = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
-// data.aws_secretsmanager_secret_version.github_token.secret_string
+      ConnectionArn    = var.codeconnection_arn
+      FullRepositoryId = "${var.GitHubOwner}/${var.GitHubRepo}"
+      BranchName     = "master"
+      DetectChanges  = "true"
       }
 
       run_order = 1
