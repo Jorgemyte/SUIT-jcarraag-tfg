@@ -1109,6 +1109,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
       region    = var.aws_region
       run_order = 2
+      namespace  = "TestVariables" 
     }
   }
 
