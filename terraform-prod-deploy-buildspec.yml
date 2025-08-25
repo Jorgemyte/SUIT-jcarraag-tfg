@@ -5,13 +5,13 @@ phases:
     runtime-versions:
       python: 3.8
     commands:
-      - echo "Instalando Terraform si es necesario..."
-      - terraform --version || curl -o terraform.zip https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip && unzip terraform.zip && mv terraform /usr/local/bin/
+      - echo "Verificando versión de Terraform..."
+      - terraform --version
 
   pre_build:
     commands:
       - echo "Inicializando Terraform..."
-      - cd DEPLOYMENT
+      - cd PROD_DEPLOY
       - terraform init
 
   build:

@@ -970,7 +970,11 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
         ]
         Resource = [
           aws_codebuild_project.BuildContainerProject.arn,
-          "${aws_codebuild_project.BuildContainerProject.arn}:*"
+          "${aws_codebuild_project.BuildContainerProject.arn}:*",
+          aws_codebuild_project.TerraformDeployProject.arn,
+          "${aws_codebuild_project.TerraformDeployProject.arn}:*",
+          aws_codebuild_project.TerraformProdDeployProject.arn,
+          "${aws_codebuild_project.TerraformProdDeployProject.arn}:*",
         ]
       },
       {
@@ -1105,7 +1109,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
       configuration = {
         ExecutionNamePrefix = "suit"
         Input               = "{\"DDBKey\":{\"ModId\":{\"S\":\"mod1\"}}}"
-        StateMachineArn     = "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:stateMachine:SUIT-StateMachine"
+        StateMachineArn     = "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:stateMachine:SUIT-${var.project_name}-StateMachine"
       }
 
       region    = var.aws_region

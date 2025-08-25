@@ -32,7 +32,7 @@ variable "aws_region" {
 variable "status_table" {
   description = "Nombre de la tabla de estado de DynamoDB"
   type        = string
-  default     = "StatusTable"
+  default     = "StatusTable-${var.project_name}"
 }
 
 variable "test_output_bucket" {
