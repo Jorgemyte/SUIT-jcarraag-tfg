@@ -28,9 +28,9 @@ resource "aws_s3_bucket" "test_output_bucket" {
     Name = "${var.project_name}-test-output-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
   }
 
-  lifecycle {
+  /*lifecycle {
     prevent_destroy = true
-  }
+  }*/
 }
 
 /* NO NECESARIA A PARTIR DE 2023
@@ -68,9 +68,9 @@ resource "aws_s3_bucket" "codepipeline_artifact" {
     Name = "${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
   }
 
-  lifecycle {
+  /*lifecycle {
     prevent_destroy = true
-  }
+  }*/
 }
 
 /* NO NECESARIA A PARTIR DE 2023
@@ -106,9 +106,9 @@ resource "aws_ecr_repository" "suit_repo" {
 
   image_tag_mutability = "MUTABLE"
 
-  lifecycle {
+  /*lifecycle {
     prevent_destroy = true
-  }
+  }*/
 }
 
 resource "aws_ecr_repository_policy" "suit_repo_policy" {
