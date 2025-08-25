@@ -605,7 +605,7 @@ resource "aws_codebuild_project" "BuildContainerProject" {
   }
 }
 
-// ---------------------------- CODE BUILD TERRAFORM DEPLOY ROLE -----------------------------------------
+// ---------------------------- CODE BUILD TERRAFORM DEPLOY / PROD-DEPLOY ROLE -----------------------------------------
 
 resource "aws_iam_role" "TerraformCodeBuildRole" {
   name = "TerraformCodeBuildRole-${var.project_name}"
@@ -862,7 +862,7 @@ resource "aws_iam_role_policy_attachment" "TerraformCodeBuildPolicyAttachment" {
 
 resource "aws_codebuild_project" "TerraformDeployProject" {
   name          = "SUIT-${var.project_name}-TerraformDeploy"
-  description   = "Ejecuta Terraform desde CodePipeline"
+  description   = "Ejecuta Terraform desde CodePipeline para desplegar deploy"
   service_role  = aws_iam_role.CodeBuildServiceRole.arn
 
   artifacts {
@@ -881,11 +881,42 @@ resource "aws_codebuild_project" "TerraformDeployProject" {
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = "terraform-buildspec.yml"
+    buildspec = "terraform-deploy-buildspec.yml"
   }
 
   tags = {
     Name = "SUIT-${var.project_name}-TerraformDeploy"
+  }
+}
+
+// ---------------------------- CODE BUILD TERRAFORM PROD - DEPLOY ----------------------------------------------
+
+resource "aws_codebuild_project" "TerraformProdDeployProject" {
+  name          = "SUIT-${var.project_name}-TerraformProdDeploy"
+  description   = "Ejecuta Terraform desde CodePipeline para desplegar prod-deploy"
+  service_role  = aws_iam_role.CodeBuildServiceRole.arn
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "hashicorp/terraform:1.5.7"
+    type                        = "LINUX_CONTAINER"
+    environment_variable {
+      name  = "AWS_REGION"
+      value = var.aws_region
+    }
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = "terraform-prod-deploy-buildspec.yml"
+  }
+
+  tags = {
+    Name = "SUIT-${var.project_name}-TerraformProdDeploy"
   }
 }
 
@@ -1106,21 +1137,17 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
     action {
       name             = "DeployProd"
-      category         = "Deploy"
+      category         = "Build"
       owner            = "AWS"
-      provider         = "Terraform"
+      provider         = "CodeBuild"
       version          = "1"
       input_artifacts  = ["SUITestSourceOutput"]
       output_artifacts = ["ProdDeploy"]
 
       configuration = {
-        ActionMode   = "APPLY"
-        RoleArn      = aws_iam_role.TerraformDeployRole.arn
-        StackName    = "${var.project_name}-SUIT-Prod-Stack"
-        TemplatePath = "SUITestSourceOutput::PROD_DEPLOY/main.tf"
+        ProjectName = aws_codebuild_project.TerraformProdDeployProject.name
       }
 
-      region    = var.aws_region
       run_order = 1
     }
   }
