@@ -1009,7 +1009,8 @@ resource "aws_iam_policy" "CodePipelinePolicy" {
       {
         Effect = "Allow"
         Action = [
-          "codeconnections:UseConnection"
+          "codestar-connections:UseConnection",
+          "codestar-connections:GetConnection"
         ]
         Resource = var.codeconnection_arn
       }
