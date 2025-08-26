@@ -63,6 +63,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "test_output_bucke
 
 resource "aws_s3_bucket" "codepipeline_artifact" {
   bucket = "${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
+  
+  // AÑADIDO PARA PODER HACER TERRAFORM DESTROY
+  force_destroy = true
 
   tags = {
     Name = "${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
@@ -103,6 +106,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "codepipeline_arti
 
 resource "aws_ecr_repository" "suit_repo" {
   name = "suit-${var.project_name}-repo"
+
+  // AÑADIDO PARA PODER HACER TERRAFORM DESTROY
+  force_delete = true
 
   image_tag_mutability = "MUTABLE"
 
