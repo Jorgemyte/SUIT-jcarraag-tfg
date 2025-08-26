@@ -92,11 +92,11 @@ resource "aws_amplify_app" "ProdApp" {
 }
 
 resource "aws_amplify_branch" "ProdAppBranch" {
-  app_id          = aws_amplify_app.ProdApp.id
+  app_id            = aws_amplify_app.ProdApp.id
   branch_name       = "master"
   description       = "Master branch for App"
   enable_auto_build = true
-  stage           = "PRODUCTION"
+  stage             = "PRODUCTION"
 
   tags = {
     Application = var.project_name
@@ -138,8 +138,8 @@ resource "aws_iam_policy" "LambdaExecutionRolePolicy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = "amplify:StartJob"
+        Effect   = "Allow"
+        Action   = "amplify:StartJob"
         Resource = "arn:aws:amplify:${var.aws_region}:${data.aws_caller_identity.current.account_id}:apps/${aws_amplify_app.ProdApp.id}/branches/*"
       }
     ]
@@ -169,7 +169,7 @@ resource "aws_lambda_function" "TriggerDeploymentLambda" {
   timeout       = 85
 
   source_code_hash = data.archive_file.lambda.output_base64sha256
-  
+
 
   environment {
     variables = {
@@ -183,7 +183,7 @@ resource "aws_lambda_function" "TriggerDeploymentLambda" {
 
 resource "null_resource" "TriggerDeployment" {
   provisioner "local-exec" {
-    command = <<EOT
+    command     = <<EOT
       aws lambda invoke \
         --function-name ${aws_lambda_function.TriggerDeploymentLambda.function_name} \
         --payload '{

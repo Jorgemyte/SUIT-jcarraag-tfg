@@ -7,6 +7,7 @@ variable "project_name" {
 variable "environment" {
   description = "Entorno"
   type        = string
+  default     = "dev"
 }
 
 variable "cidr_block" {

@@ -17,7 +17,7 @@ data "aws_ssm_parameter" "modules_table" {
 }
 
 data "aws_ssm_parameter" "codepipeline_artifact" {
-  name = "CodePipelineArtifact" 
+  name = "CodePipelineArtifact"
 }
 
 data "aws_ssm_parameter" "container_image" {
@@ -453,7 +453,7 @@ resource "aws_lambda_function" "update_modules_lambda" {
 
 resource "null_resource" "update_modules" {
   provisioner "local-exec" {
-    command = <<EOT
+    command     = <<EOT
       aws lambda invoke \
         --function-name ${aws_lambda_function.update_modules_lambda.function_name} \
         --payload '{

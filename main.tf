@@ -63,7 +63,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "test_output_bucke
 
 resource "aws_s3_bucket" "codepipeline_artifact" {
   bucket = "${var.project_name}-codepipeline-artifact-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
-  
+
   // AÑADIDO PARA PODER HACER TERRAFORM DESTROY
   force_destroy = true
 
@@ -342,10 +342,10 @@ resource "aws_iam_role_policy_attachment" "AmplifyAccessPolicyAttachment" {
 // ---------------------------- TEST APP (AMPLIFY) -------------------------------------------------------
 
 resource "aws_amplify_app" "TestApp" {
-  name       = "TestAppWebsite"
-  repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
+  name        = "TestAppWebsite"
+  repository  = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
   oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
-// data.aws_secretsmanager_secret_version.github_token.secret_string
+  // data.aws_secretsmanager_secret_version.github_token.secret_string
   build_spec = jsonencode({
     version = 1
     applications = [
@@ -398,10 +398,10 @@ resource "aws_amplify_branch" "TestAppBranch" {
 // ---------------------------- STATUS PAGE (AMPLIFY) -------------------------------------------------------
 
 resource "aws_amplify_app" "StatusPage" {
-  name       = "StatusPage"
-  repository = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
+  name        = "StatusPage"
+  repository  = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
   oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
-// data.aws_secretsmanager_secret_version.github_token.secret_string
+  // data.aws_secretsmanager_secret_version.github_token.secret_string
   build_spec = jsonencode({
     version = 1
     applications = [
@@ -600,7 +600,7 @@ resource "aws_codebuild_project" "BuildContainerProject" {
   }
 
   source {
-    type = "CODEPIPELINE"
+    type      = "CODEPIPELINE"
     buildspec = "buildspec.yml"
   }
 
@@ -872,18 +872,18 @@ resource "aws_iam_role_policy_attachment" "TerraformCodeBuildPolicyAttachment" {
 // ---------------------------- CODE BUILD TERRAFORM DEPLOY ----------------------------------------------
 
 resource "aws_codebuild_project" "TerraformDeployProject" {
-  name          = "SUIT-${var.project_name}-TerraformDeploy"
-  description   = "Ejecuta Terraform desde CodePipeline para desplegar deploy"
-  service_role  = aws_iam_role.CodeBuildServiceRole.arn
+  name         = "SUIT-${var.project_name}-TerraformDeploy"
+  description  = "Ejecuta Terraform desde CodePipeline para desplegar deploy"
+  service_role = aws_iam_role.CodeBuildServiceRole.arn
 
   artifacts {
     type = "CODEPIPELINE"
   }
 
   environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "hashicorp/terraform:1.5.7"
-    type                        = "LINUX_CONTAINER"
+    compute_type = "BUILD_GENERAL1_SMALL"
+    image        = "hashicorp/terraform:1.5.7"
+    type         = "LINUX_CONTAINER"
     environment_variable {
       name  = "AWS_REGION"
       value = var.aws_region
@@ -903,18 +903,18 @@ resource "aws_codebuild_project" "TerraformDeployProject" {
 // ---------------------------- CODE BUILD TERRAFORM PROD - DEPLOY ----------------------------------------------
 
 resource "aws_codebuild_project" "TerraformProdDeployProject" {
-  name          = "SUIT-${var.project_name}-TerraformProdDeploy"
-  description   = "Ejecuta Terraform desde CodePipeline para desplegar prod-deploy"
-  service_role  = aws_iam_role.CodeBuildServiceRole.arn
+  name         = "SUIT-${var.project_name}-TerraformProdDeploy"
+  description  = "Ejecuta Terraform desde CodePipeline para desplegar prod-deploy"
+  service_role = aws_iam_role.CodeBuildServiceRole.arn
 
   artifacts {
     type = "CODEPIPELINE"
   }
 
   environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "hashicorp/terraform:1.5.7"
-    type                        = "LINUX_CONTAINER"
+    compute_type = "BUILD_GENERAL1_SMALL"
+    image        = "hashicorp/terraform:1.5.7"
+    type         = "LINUX_CONTAINER"
     environment_variable {
       name  = "AWS_REGION"
       value = var.aws_region
@@ -1060,10 +1060,10 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
       output_artifacts = ["SUITestSourceOutput"]
 
       configuration = {
-      ConnectionArn    = var.codeconnection_arn
-      FullRepositoryId = "${var.GitHubOwner}/${var.GitHubRepo}"
-      BranchName     = "master"
-      DetectChanges  = "true"
+        ConnectionArn    = var.codeconnection_arn
+        FullRepositoryId = "${var.GitHubOwner}/${var.GitHubRepo}"
+        BranchName       = "master"
+        DetectChanges    = "true"
       }
 
       run_order = 1
@@ -1125,7 +1125,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
       region    = var.aws_region
       run_order = 2
-      namespace  = "TestVariables" 
+      namespace = "TestVariables"
     }
   }
 
