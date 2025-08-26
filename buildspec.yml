@@ -5,62 +5,37 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
-      - IMAGE_TAG=`echo $CODEBUILD_BUILD_ID | awk -F ':' '{print $2}'`
-
   build:
     commands:
       - echo Build started on `date`
-      - echo Building the Docker image...
+      - echo Building the Docker image...        
+      - IMAGE_TAG=`echo $CODEBUILD_BUILD_ID | awk -F ':' '{print $2}'`  
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
-      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
-
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
   post_build:
     commands:
       - echo Build completed on `date`
       - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
-      
-      # Update SSM Parameter with new image URI
-      - aws ssm put-parameter --name suit-container-image --value $REPOSITORY_URI:$IMAGE_TAG --type String --overwrite
-      
-      # Clone and update repository
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - aws ssm put-parameter --name suit-container-image --value $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG --type String --overwrite
       - echo Cloning GitHub repository...
-      - git clone https://github.com/$GITHUB_USERNAME/$RepositoryName.git
+      - git clone https://${GITHUB_TOKEN}@github.com/$GITHUB_USERNAME/$RepositoryName.git
       - cd $RepositoryName
-      
-      # Update configuration files if template exists
       - |
         if [ -f "status/generatetable.js.temp" ]; then
-          # Replace placeholders with actual values
           sed "s/Cognito_IDP_ID/$Cognito_IDP_ID/" status/generatetable.js.temp > status/generatetable.js
           sed -i "s/AWS_REGION/$AWS_DEFAULT_REGION/" status/generatetable.js
           sed -i "s/DDB_STATUS_TABLE/$DDB_STATUS_TABLE/" status/generatetable.js
-          
-          # Configure git and commit changes
           git config --local user.name "CodeBuild"
           git config --local user.email "codebuild@no-reply.com"
           git add status/generatetable.js
           git rm status/generatetable.js.temp
           git commit -m "Updated region, DDB Table & Cognito IDP"
-          
-          # Create temporary branch, merge to master and push
           git branch tmp
           git checkout master
           git merge tmp
           git push origin HEAD:master
         fi
-
-artifacts:
-  files:
-    - imageDefinitions.json
-    - DEPLOYMENT/**/*
-    - PROD_DEPLOY/**/*
-    - status/**/*
-    - src/**/*
-    - Dockerfile
-    - requirements.txt
-  discard-paths: no
 
 
 #version: 0.2

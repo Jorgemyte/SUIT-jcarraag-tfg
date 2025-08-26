@@ -586,6 +586,11 @@ resource "aws_codebuild_project" "BuildContainerProject" {
       name  = "GITHUB_USERNAME"
       value = var.GitHubOwner
     }
+
+    environment_variable {
+      name  = "GITHUB_TOKEN"
+      value = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
+    }
   }
 
   source {
