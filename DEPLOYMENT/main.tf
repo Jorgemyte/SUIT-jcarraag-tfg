@@ -16,7 +16,7 @@ data "aws_ssm_parameter" "modules_table" {
   name = "ModulesTable"
 }
 
-data "aws_ssm_parameter" "codepipeline_artifact" {
+data "aws_ssm_parameter" "code_pipeline_artifact" {
   name = "CodePipelineArtifact"
 }
 
@@ -24,6 +24,8 @@ data "aws_ssm_parameter" "container_image" {
   name            = "suit-container-image"
   with_decryption = false
 }
+
+data "aws_caller_identity" "current" {}
 
 // ---------------------------- NETWORK -------------------------------------------------------
 
@@ -358,17 +360,17 @@ resource "aws_iam_role_policy_attachment" "update_modules_lambda_role_policy_att
 
 resource "aws_iam_role" "step_functions_role" {
   name = "SUIT-${var.project_name}-SfnExecutionRole"
-
-  assume_role_policy = jsondecode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "states.amazonaws.com"
-      }
-      Action = "sts:AssumeRole"
-    }]
-  })
+  
+  assume_role_policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [{
+        Effect = "Allow"
+        Principal = {
+          Service = "states.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }]
+    })
 
   path = "/"
 
@@ -558,7 +560,7 @@ resource "aws_security_group" "execution_sg" {
 
   egress {
     protocol    = "-1"
-    cidr_blocks = "0.0.0.0/0"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
