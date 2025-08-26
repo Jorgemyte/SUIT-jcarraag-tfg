@@ -186,9 +186,13 @@ resource "null_resource" "TriggerDeployment" {
     command = <<EOT
       aws lambda invoke \
         --function-name ${aws_lambda_function.TriggerDeploymentLambda.function_name} \
-        --payload '{"RequestType": "Create", "ResourceProperties": {"appId": "${aws_amplify_app.ProdApp.id}", "branchName": "${aws_amplify_branch.ProdAppBranch.branch_name}"}}' \
+        --payload '{
+          "appId": "${aws_amplify_app.ProdApp.id}",
+          "branchName": "${aws_amplify_branch.ProdAppBranch.branch_name}"
+        }' \
         response.json
     EOT
+    interpreter = ["bash", "-c"]
   }
 
   triggers = {
@@ -197,12 +201,13 @@ resource "null_resource" "TriggerDeployment" {
   }
 }
 
+
 // ---------------------------- SSM PARAMETER -------------------------------------------------------
 
 resource "aws_ssm_parameter" "ProdAppDomainParameter" {
   name        = "ProdAppURL"
   type        = "String"
-  value       = "https://master.${aws_amplify_app.ProdApp.default_domain}"
+  value       = "https://${aws_amplify_app.ProdApp.branch_name}.${aws_amplify_app.ProdApp.default_domain}"
   description = "URL of production website"
 }
 

@@ -1,3 +1,30 @@
+// ---------------------------- GET SSM PARAMETERS -------------------------------------------------------
+
+data "aws_ssm_parameter" "test_output_bucket" {
+  name = "TestOutputBucket"
+}
+
+data "aws_ssm_parameter" "status_table" {
+  name = "StatusTable"
+}
+
+data "aws_ssm_parameter" "test_app_domain" {
+  name = "TestAppDomain"
+}
+
+data "aws_ssm_parameter" "modules_table" {
+  name = "ModulesTable"
+}
+
+data "aws_ssm_parameter" "codepipeline_artifact" {
+  name = "CodePipelineArtifact" 
+}
+
+data "aws_ssm_parameter" "container_image" {
+  name            = "suit-container-image"
+  with_decryption = false
+}
+
 // ---------------------------- NETWORK -------------------------------------------------------
 
 resource "aws_vpc" "vpc" {
@@ -6,7 +33,6 @@ resource "aws_vpc" "vpc" {
   tags = {
     Name        = "SUIT-${var.project_name}-VPC-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -22,7 +48,6 @@ resource "aws_subnet" "public_subnet" {
   tags = {
     Name        = "SUIT-${var.project_name}-Public-Subnet-${count.index + 1}-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -30,7 +55,6 @@ resource "aws_internet_gateway" "IGW" {
   tags = {
     Name        = "SUIT-${var.project_name}-IGW-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -50,7 +74,6 @@ resource "aws_route_table" "public_route_table" {
   tags = {
     Name        = "SUIT-${var.project_name}-Public-Route-Table-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -68,7 +91,6 @@ resource "aws_ecs_cluster" "serverless_cluster" {
   tags = {
     Name        = "SUIT-${var.project_name}-Serverless-Cluster-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -95,7 +117,6 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-ECSTaskExecutionRole-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -127,7 +148,6 @@ resource "aws_iam_role" "ecs_task_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-ECSTaskRole-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -151,10 +171,10 @@ resource "aws_iam_policy" "ecs_task_role_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::${var.test_output_bucket}/*",
-          "arn:aws:s3:::${var.test_output_bucket}",
-          "arn:aws:s3:::${var.code_pipeline_artifact}/*",
-          "arn:aws:s3:::${var.code_pipeline_artifact}",
+          "arn:aws:s3:::${data.aws_ssm_parameter.test_output_bucket.value}/*",
+          "arn:aws:s3:::${data.aws_ssm_parameter.test_output_bucket.value}",
+          "arn:aws:s3:::${data.aws_ssm_parameter.code_pipeline_artifact.value}/*",
+          "arn:aws:s3:::${data.aws_ssm_parameter.code_pipeline_artifact.value}",
           "arn:aws:s3:::codepipeline-${var.aws_region}-*"
         ]
       },
@@ -165,7 +185,7 @@ resource "aws_iam_policy" "ecs_task_role_policy" {
           "dynamodb:PutItem",
           "dynamodb:UpdateItem"
         ]
-        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.status_table}"
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${data.aws_ssm_parameter.status_table.value}"
       },
       {
         Effect   = "Allow"
@@ -178,7 +198,6 @@ resource "aws_iam_policy" "ecs_task_role_policy" {
   tags = {
     Name        = "SUIT-${var.project_name}-ECSTaskRole-Policy-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -210,7 +229,6 @@ resource "aws_iam_role" "lambda_execution_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-LambdaExecutionRole-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -236,10 +254,10 @@ resource "aws_iam_policy" "lambda_execution_role_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::${var.test_output_bucket}/*",
-          "arn:aws:s3:::${var.test_output_bucket}",
-          "arn:aws:s3:::${var.code_pipeline_artifact}/*",
-          "arn:aws:s3:::${var.code_pipeline_artifact}",
+          "arn:aws:s3:::${data.aws_ssm_parameter.test_output_bucket.value}/*",
+          "arn:aws:s3:::${data.aws_ssm_parameter.test_output_bucket.value}",
+          "arn:aws:s3:::${data.aws_ssm_parameter.code_pipeline_artifact.value}/*",
+          "arn:aws:s3:::${data.aws_ssm_parameter.code_pipeline_artifact.value}",
           "arn:aws:s3:::codepipeline-${var.aws_region}-*"
         ]
       },
@@ -250,7 +268,7 @@ resource "aws_iam_policy" "lambda_execution_role_policy" {
           "dynamodb:PutItem",
           "dynamodb:UpdateItem"
         ]
-        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.status_table}"
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${data.aws_ssm_parameter.status_table.value}"
       },
       {
         Effect = "Allow"
@@ -269,7 +287,6 @@ resource "aws_iam_policy" "lambda_execution_role_policy" {
   tags = {
     Name        = "SUIT-${var.project_name}-LambdaExecutionRole-Policy-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -300,7 +317,6 @@ resource "aws_iam_role" "update_modules_lambda_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-UpdateModulesLambdaRole-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -322,14 +338,13 @@ resource "aws_iam_policy" "update_modules_lambda_role_policy" {
         "dynamodb:PutItem",
         "dynamodb:UpdateItem"
       ]
-      Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.modules_table_name}"
+      Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${data.aws_ssm_parameter.modules_table.value}"
     }]
   })
 
   tags = {
     Name        = "SUIT-${var.project_name}-UpdateModulesLambdaRole-Policy-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -360,7 +375,6 @@ resource "aws_iam_role" "step_functions_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-SfnExecutionRole-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -380,7 +394,7 @@ resource "aws_iam_policy" "step_functions_role_policy" {
         ]
         Resource = [
           "${aws_ecs_task_definition.serverless_firefox_ecs_task.arn}",
-          "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.modules_table_name}",
+          "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${data.aws_ssm_parameter.modules_table.value}",
           "${aws_lambda_function.serverless_chrome_stable.arn}:*",
           "${aws_lambda_function.serverless_chrome_beta.arn}:*",
           "${aws_lambda_function.serverless_chrome_video.arn}:*"
@@ -400,7 +414,6 @@ resource "aws_iam_policy" "step_functions_role_policy" {
   tags = {
     Name        = "SUIT-${var.project_name}-SfnExecutionRole-Policy-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -409,12 +422,12 @@ resource "aws_iam_policy" "step_functions_role_policy" {
 
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "lambda_function_payload.py"
-  output_path = "lambda_function_payload.zip"
+  source_file = "lambda_function_payload_dynamodb.py"
+  output_path = "lambda_function_payload_dynamodb.zip"
 }
 
 resource "aws_lambda_function" "update_modules_lambda" {
-  filename      = "lambda_function_payload.zip"
+  filename      = "lambda_function_payload_dynamodb.zip"
   function_name = "SUIT-${var.project_name}-UpdateModules"
   role          = aws_iam_role.update_modules_lambda_role.arn
   handler       = "index.lambda_handler"
@@ -425,14 +438,13 @@ resource "aws_lambda_function" "update_modules_lambda" {
 
   environment {
     variables = {
-      TABLE_NAME = var.modules_table_name
+      TABLE_NAME = data.aws_ssm_parameter.modules_table.value
     }
   }
 
   tags = {
     Name        = "SUIT-${var.project_name}-UpdateModules-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 
 }
@@ -440,42 +452,34 @@ resource "aws_lambda_function" "update_modules_lambda" {
 // ---------------------------- UPDATE MODULES -------------------------------------------------------
 
 resource "null_resource" "update_modules" {
-  triggers = {
-    service_token = aws_lambda_function.update_modules_lambda.arn
-    table         = var.modules_table_name // aws_dynamodb_table.modules_table.name
-    modules = jsonencode([
-      {
-        ModId     = "mod1"
-        TestCases = ["tc0001", "tc0003", "tc0005", "tc0007"]
-      },
-      {
-        ModId     = "mod2"
-        TestCases = ["tc0002", "tc0004", "tc0006"]
-      },
-      {
-        ModId     = "mod3"
-        TestCases = ["tc0003", "tc0006"]
-      },
-      {
-        ModId     = "mod4"
-        TestCases = ["tc0001", "tc0002", "tc0003", "tc0005"]
-      },
-      {
-        ModId     = "mod5"
-        TestCases = ["tc0002", "tc0003", "tc0005", "tc0007"]
-      }
-    ])
-  }
-
   provisioner "local-exec" {
     command = <<EOT
-      aws lambda invoke --function-name ${self.triggers.service_token} --payload '{
-        "Table": "${self.triggers.table}",
-        "Modules": ${self.triggers.modules}
-      }' response.json
+      aws lambda invoke \
+        --function-name ${aws_lambda_function.update_modules_lambda.function_name} \
+        --payload '{
+          "RequestType": "Create",
+          "ResourceProperties": {
+            "Table": "${data.aws_ssm_parameter.modules_table.value}",
+            "Modules": [
+              "{\"ModId\":{\"S\":\"mod1\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}",
+              "{\"ModId\":{\"S\":\"mod2\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0004\"},{\"S\":\"tc0006\"}]}}",
+              "{\"ModId\":{\"S\":\"mod3\"},\"TestCases\":{\"L\":[{\"S\":\"tc0003\"},{\"S\":\"tc0006\"}]}}",
+              "{\"ModId\":{\"S\":\"mod4\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0002\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"}]}}",
+              "{\"ModId\":{\"S\":\"mod5\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}"
+            ]
+          }
+        }' \
+        response.json
     EOT
+    interpreter = ["bash", "-c"]
+  }
+
+  triggers = {
+    lambda_function = aws_lambda_function.update_modules_lambda.arn
+    table_name      = data.aws_ssm_parameter.modules_table.value
   }
 }
+
 
 // ---------------------------- SERVERLESS FIREFOX (FARGATE & LOG GROUP) -------------------------------------------------------
 
@@ -496,7 +500,7 @@ resource "aws_ecs_task_definition" "serverless_firefox_ecs_task" {
   container_definitions = jsonencode([
     {
       name      = "suit-serverless-firefox"
-      image     = var.container_name
+      image     = data.aws_ssm_parameter.container_image.value
       essential = true
       entryPoint = [
         "/var/lang/bin/python",
@@ -518,15 +522,15 @@ resource "aws_ecs_task_definition" "serverless_firefox_ecs_task" {
         },
         {
           name  = "WebURL"
-          value = "https://master.${var.test_app_domain}"
+          value = "https://master.${data.aws_ssm_parameter.test_app_domain.value}"
         },
         {
           name  = "StatusTable"
-          value = var.status_table
+          value = data.aws_ssm_parameter.status_table.value
         },
         {
           name  = "s3buck"
-          value = var.test_output_bucket
+          value = data.aws_ssm_parameter.test_output_bucket.value
         },
         {
           name  = "s3prefix"
@@ -543,7 +547,6 @@ resource "aws_ecs_task_definition" "serverless_firefox_ecs_task" {
   tags = {
     Name        = "SUIT-${var.project_name}-ServerlessFirefoxECSTask-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -569,7 +572,7 @@ resource "aws_lambda_function" "serverless_chrome_stable" {
   role          = aws_iam_role.lambda_execution_role.arn
   timeout       = 303
 
-  image_uri = var.container_name
+  image_uri = data.aws_ssm_parameter.container_image.value
 
   image_config {
     entry_point = [
@@ -591,7 +594,6 @@ resource "aws_lambda_function" "serverless_chrome_stable" {
   tags = {
     Name        = "SUIT-${var.project_name}-ChromeStable-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -605,7 +607,7 @@ resource "aws_lambda_function" "serverless_chrome_beta" {
   role          = aws_iam_role.lambda_execution_role.arn
   timeout       = 303
 
-  image_uri = var.container_name
+  image_uri = data.aws_ssm_parameter.container_image.value
 
   image_config {
     entry_point = [
@@ -627,7 +629,6 @@ resource "aws_lambda_function" "serverless_chrome_beta" {
   tags = {
     Name        = "SUIT-${var.project_name}-ChromeBeta-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -641,7 +642,7 @@ resource "aws_lambda_function" "serverless_chrome_video" {
   role          = aws_iam_role.lambda_execution_role.arn
   timeout       = 303
 
-  image_uri = var.container_name
+  image_uri = data.aws_ssm_parameter.container_image.value
 
   image_config {
     entry_point = [
@@ -664,7 +665,6 @@ resource "aws_lambda_function" "serverless_chrome_video" {
   tags = {
     Name        = "SUIT-${var.project_name}-ChromeVideo-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
 }
 
@@ -682,7 +682,7 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
         "Type" : "Task",
         "Resource" : "arn:aws:states:::dynamodb:getItem",
         "Parameters" : {
-          "TableName" : "${var.modules_table_name}",
+          "TableName" : "${data.aws_ssm_parameter.modules_table.value}",
           "Key.$" : "$.DDBKey"
         },
         "Next" : "Run Tests"
@@ -709,10 +709,10 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                           "tcname.$" : "$.S",
                           "module.$" : "$$.Execution.Input.DDBKey.ModId.S",
                           "testrun.$" : "$$.Execution.Id",
-                          "s3buck" : "${var.test_output_bucket}",
+                          "s3buck" : "${data.aws_ssm_parameter.test_output_bucket.value}",
                           "s3prefix" : "${var.project_name}/",
-                          "WebURL" : "https://master.${var.test_app_domain}",
-                          "StatusTable" : "${var.status_table}"
+                          "WebURL" : "https://master.${data.aws_ssm_parameter.test_app_domain.value}",
+                          "StatusTable" : "${data.aws_ssm_parameter.status_table.value}"
                         },
                         "End" : true
                       }
@@ -742,10 +742,10 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                           "tcname.$" : "$.S",
                           "module.$" : "$$.Execution.Input.DDBKey.ModId.S",
                           "testrun.$" : "$$.Execution.Id",
-                          "s3buck" : "${var.test_output_bucket}",
+                          "s3buck" : "${data.aws_ssm_parameter.test_output_bucket.value}",
                           "s3prefix" : "${var.project_name}/",
-                          "WebURL" : "https://master.${var.test_app_domain}",
-                          "StatusTable" : "${var.status_table}"
+                          "WebURL" : "https://master.${data.aws_ssm_parameter.test_app_domain.value}",
+                          "StatusTable" : "${data.aws_ssm_parameter.status_table.value}"
                         },
                         "End" : true
                       }
@@ -768,10 +768,10 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                     "tcname" : "tc0011",
                     "module" : "mod7",
                     "testrun.$" : "$$.Execution.Id",
-                    "s3buck" : "${var.test_output_bucket}",
+                    "s3buck" : "${data.aws_ssm_parameter.test_output_bucket.value}",
                     "s3prefix" : "${var.project_name}/",
-                    "WebURL" : "https://master.${var.test_app_domain}",
-                    "StatusTable" : "${var.status_table}"
+                    "WebURL" : "https://master.${data.aws_ssm_parameter.test_app_domain.value}",
+                    "StatusTable" : "${data.aws_ssm_parameter.status_table.value}"
                   },
                   "End" : true
                 }
@@ -989,7 +989,5 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
   tags = {
     Name        = "SUIT-${var.project_name}-StateMachine-${var.environment}"
     Environment = var.environment
-    Owner       = var.owner
   }
-
 }

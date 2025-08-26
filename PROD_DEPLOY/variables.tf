@@ -1,9 +1,3 @@
-variable "repository_name" {
-  description = "Enter the name of the container to be used"
-  type        = string
-  default     = "WebAppSourceRepo"
-}
-
 variable "project_name" {
   description = "Nombre del proyecto"
   type        = string

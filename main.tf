@@ -135,24 +135,6 @@ resource "aws_ecr_repository_policy" "suit_repo_policy" {
   })
 }
 
-// ---------------------------- MODULES TABLE (DynamoDB Table) -------------------------------------------------------
-
-resource "aws_dynamodb_table" "modules_table" {
-  name         = "ModulesTable-${var.project_name}"
-  billing_mode = "PAY_PER_REQUEST"
-
-  attribute {
-    name = "ModId"
-    type = "S"
-  }
-
-  hash_key = "ModId"
-
-  tags = {
-    Name = "ModulesTable-${var.project_name}"
-  }
-}
-
 // ---------------------------- PARAMETERS -------------------------------------------------------
 
 resource "aws_ssm_parameter" "modules_table_parameter" {
@@ -190,18 +172,36 @@ resource "aws_ssm_parameter" "status_table_parameter" {
   description = "SSM Parameter for Status Table"
 }
 
-resource "aws_ssm_parameter" "TestAppDomainParameter" {
+resource "aws_ssm_parameter" "test_app_domain_parameter" {
   name        = "TestAppDomain"
   type        = "String"
   value       = aws_amplify_app.TestApp.default_domain
   description = "SSM Parameter for Test App Domain"
 }
 
-resource "aws_ssm_parameter" "StatusPageDomainParameter" {
+resource "aws_ssm_parameter" "status_page_domain_parameter" {
   name        = "StatusPageDomain"
   type        = "String"
   value       = aws_amplify_app.StatusPage.default_domain
   description = "SSM Parameter for Status Page Domain"
+}
+
+// ---------------------------- MODULES TABLE (DynamoDB Table) -------------------------------------------------------
+
+resource "aws_dynamodb_table" "modules_table" {
+  name         = "ModulesTable-${var.project_name}"
+  billing_mode = "PAY_PER_REQUEST"
+
+  attribute {
+    name = "ModId"
+    type = "S"
+  }
+
+  hash_key = "ModId"
+
+  tags = {
+    Name = "ModulesTable-${var.project_name}"
+  }
 }
 
 // ---------------------------- STATUS TABLE (DynamoDB Table) -------------------------------------------------------

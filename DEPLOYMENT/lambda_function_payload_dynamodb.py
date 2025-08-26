@@ -5,14 +5,20 @@ ddb = boto3.client('dynamodb')
 
 def lambda_handler(event, context):
     try:
-        if event['RequestType'] == 'Delete' or event['RequestType'] == 'Change':
+        request_type = event.get('RequestType')
+        props = event.get('ResourceProperties', {})
+
+        if request_type in ['Delete', 'Change']:
             return {
                 'statusCode': 200,
-                'body': json.dumps('Successfully handled Delete or Change request')
+                'body': json.dumps(f'Successfully handled {request_type} request')
             }
-        elif event['RequestType'] == 'Create':
-            ddb_table = event['ResourceProperties']['Table']
-            for module in event['ResourceProperties']['Modules']:
+
+        elif request_type == 'Create':
+            ddb_table = props.get('Table')
+            modules = props.get('Modules', [])
+
+            for module in modules:
                 ddb.put_item(TableName=ddb_table, Item=json.loads(module))
 
             return {
@@ -20,9 +26,15 @@ def lambda_handler(event, context):
                 'body': json.dumps('Successfully updated DynamoDB Table')
             }
 
+        else:
+            return {
+                'statusCode': 400,
+                'body': json.dumps('Invalid RequestType')
+            }
+
     except Exception as e:
-        print('Received client error: %s' % e)
+        print(f'Error: {e}')
         return {
             'statusCode': 500,
-            'body': json.dumps(f'Received client error: {e}')
+            'body': json.dumps(f'Received client error: {str(e)}')
         }
