@@ -724,7 +724,9 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "iam:UntagInstanceProfile",
           "iam:ListRolePolicies",
           "iam:GetPolicyVersion",
-          "iam:ListAttachedRolePolicies"
+          "iam:ListAttachedRolePolicies",
+          "iam:GetInstanceProfile",
+          "iam:ListInstanceProfiles"
         ]
         Resource = "*"
       },
