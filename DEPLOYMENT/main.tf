@@ -56,16 +56,13 @@ resource "aws_subnet" "public_subnet" {
 }
 
 resource "aws_internet_gateway" "IGW" {
+  vpc_id = aws_vpc.vpc.id
+
   tags = {
     Name        = "SUIT-${var.project_name}-IGW-${var.environment}"
     Environment = var.environment
     Stage       = var.stage
   }
-}
-
-resource "aws_internet_gateway_attachment" "IGW_att" {
-  internet_gateway_id = aws_internet_gateway.IGW.id
-  vpc_id              = aws_vpc.vpc.id
 }
 
 resource "aws_route_table" "public_route_table" {
@@ -446,7 +443,7 @@ resource "aws_lambda_function" "update_modules_lambda" {
   filename      = "lambda_function_payload_dynamodb.zip"
   function_name = "SUIT-${var.project_name}-UpdateModules"
   role          = aws_iam_role.update_modules_lambda_role.arn
-  handler       = "index.lambda_handler"
+  handler       = "lambda_function_payload_dynamodb.lambda_handler"
   runtime       = "python3.8"
   timeout       = 90
 
@@ -468,27 +465,26 @@ resource "aws_lambda_function" "update_modules_lambda" {
 
 // ---------------------------- UPDATE MODULES -------------------------------------------------------
 
+locals {
+  modules_payload = jsonencode({
+    RequestType = "Create"
+    ResourceProperties = {
+      Table   = data.aws_ssm_parameter.modules_table.value
+      Modules = [
+        "{\"ModId\":{\"S\":\"mod1\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}",
+        "{\"ModId\":{\"S\":\"mod2\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0004\"},{\"S\":\"tc0006\"}]}}",
+        "{\"ModId\":{\"S\":\"mod3\"},\"TestCases\":{\"L\":[{\"S\":\"tc0003\"},{\"S\":\"tc0006\"}]}}",
+        "{\"ModId\":{\"S\":\"mod4\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0002\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"}]}}",
+        "{\"ModId\":{\"S\":\"mod5\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}"
+      ]
+    }
+  })
+}
+
 resource "null_resource" "update_modules" {
   provisioner "local-exec" {
-    command     = <<EOT
-      aws lambda invoke \
-        --function-name ${aws_lambda_function.update_modules_lambda.function_name} \
-        --payload '{
-          "RequestType": "Create",
-          "ResourceProperties": {
-            "Table": "${data.aws_ssm_parameter.modules_table.value}",
-            "Modules": [
-              "{\"ModId\":{\"S\":\"mod1\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}",
-              "{\"ModId\":{\"S\":\"mod2\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0004\"},{\"S\":\"tc0006\"}]}}",
-              "{\"ModId\":{\"S\":\"mod3\"},\"TestCases\":{\"L\":[{\"S\":\"tc0003\"},{\"S\":\"tc0006\"}]}}",
-              "{\"ModId\":{\"S\":\"mod4\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0002\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"}]}}",
-              "{\"ModId\":{\"S\":\"mod5\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}"
-            ]
-          }
-        }' \
-        response.json
-    EOT
-    interpreter = ["bash", "-c"]
+    command = "aws lambda invoke --function-name ${aws_lambda_function.update_modules_lambda.function_name} --payload '${local.modules_payload}' response.json"
+    interpreter = ["sh", "-c"]
   }
 
   triggers = {
