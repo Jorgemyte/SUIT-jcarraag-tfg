@@ -792,7 +792,8 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "lambda:RemovePermission",
           "lambda:GetFunctionConfiguration",
           "lambda:ListTags",
-          "lambda:ListVersionsByFunction"
+          "lambda:ListVersionsByFunction",
+          "lambda:GetFunctionCodeSigningConfig"
         ]
         Resource = "*"
       },
@@ -833,7 +834,8 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "states:UntagResource",
           "states:TagResource",
           "states:CreateStateMachine",
-          "states:UpdateStateMachine"
+          "states:UpdateStateMachine",
+          "states:ValidateStateMachineDefinition"
         ]
         Resource = "*"
       },
