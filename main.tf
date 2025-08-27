@@ -678,6 +678,7 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
         Action = [
           "ssm:GetParameters",
           "ssm:GetParameter",
+          "ssm:GetParameterHistory",
           "ssm:PutParameter",
           "ssm:DeleteParameter",
           "ssm:DeleteParameters",
@@ -729,6 +730,7 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
         Action = [
           "ec2:AuthorizeSecurityGroupEgress",
           "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:DescribeAvailabilityZones",
           "ec2:DeleteSubnet",
           "ec2:ReplaceRouteTableAssociation",
           "ec2:DeleteRoute",
@@ -874,7 +876,7 @@ resource "aws_iam_role_policy_attachment" "TerraformCodeBuildPolicyAttachment" {
 resource "aws_codebuild_project" "TerraformDeployProject" {
   name         = "SUIT-${var.project_name}-TerraformDeploy"
   description  = "Ejecuta Terraform desde CodePipeline para desplegar deploy"
-  service_role = aws_iam_role.CodeBuildServiceRole.arn
+  service_role = aws_iam_role.TerraformCodeBuildRole.arn
 
   artifacts {
     type = "CODEPIPELINE"
@@ -905,7 +907,7 @@ resource "aws_codebuild_project" "TerraformDeployProject" {
 resource "aws_codebuild_project" "TerraformProdDeployProject" {
   name         = "SUIT-${var.project_name}-TerraformProdDeploy"
   description  = "Ejecuta Terraform desde CodePipeline para desplegar prod-deploy"
-  service_role = aws_iam_role.CodeBuildServiceRole.arn
+  service_role = aws_iam_role.TerraformCodeBuildRole.arn
 
   artifacts {
     type = "CODEPIPELINE"
