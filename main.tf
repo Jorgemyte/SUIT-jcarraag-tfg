@@ -791,7 +791,8 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "lambda:DeleteEventSourceMapping",
           "lambda:RemovePermission",
           "lambda:GetFunctionConfiguration",
-          "lambda:ListTags"
+          "lambda:ListTags",
+          "lambda:ListVersionsByFunction"
         ]
         Resource = "*"
       },
