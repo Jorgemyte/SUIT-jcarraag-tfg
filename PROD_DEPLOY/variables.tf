@@ -21,3 +21,9 @@ variable "GitHubRepo" {
   type        = string
   default     = "SUIT-jcarraag-tfg"
 }
+
+variable "stage" {
+  description = "Stage de la pipeline a la que pertenece el recurso"
+  type        = string
+  default     = "prod-deploy"
+}

@@ -19,6 +19,12 @@ resource "aws_iam_role" "AmplifyAccessRole" {
   })
 
   path = "/"
+
+  tags = {
+      Name        = "SUIT-${var.project_name}-Prod-AmplifyRole"
+      Stage       = var.stage
+    }
+
 }
 
 resource "aws_iam_policy" "AmplifyAccessRolePolicy" {
@@ -38,6 +44,12 @@ resource "aws_iam_policy" "AmplifyAccessRolePolicy" {
       }
     ]
   })
+
+  tags = {
+      Name        = "SUIT-${var.project_name}-Prod-AmplifyRole-Policy"
+      Stage       = var.stage
+    }
+
 }
 
 resource "aws_iam_role_policy_attachment" "AmplifyAccessRolePolicyAttachment" {
@@ -86,8 +98,8 @@ resource "aws_amplify_app" "ProdApp" {
   }
 
   tags = {
-    Application = var.project_name
     Name        = "ProdAppWebsite"
+    Stage       = var.stage
   }
 }
 
@@ -99,8 +111,8 @@ resource "aws_amplify_branch" "ProdAppBranch" {
   stage             = "PRODUCTION"
 
   tags = {
-    Application = var.project_name
     Name        = "ProdAppBranch"
+    Stage       = var.stage
   }
 }
 
@@ -123,6 +135,11 @@ resource "aws_iam_role" "LambdaExecutionRole" {
   })
 
   path = "/"
+
+  tags = {
+      Name        = "SUIT-${var.project_name}-Prod-LambdaExecutionRole"
+      Stage       = var.stage
+    }
 }
 
 resource "aws_iam_role_policy_attachment" "AWSLambdaBasicExecutionRoleAttachment" {
@@ -144,6 +161,12 @@ resource "aws_iam_policy" "LambdaExecutionRolePolicy" {
       }
     ]
   })
+
+  tags = {
+      Name        = "SUIT-${var.project_name}-Prod-LambdaExecutionRole-Policy"
+      Stage       = var.stage
+    }
+
 }
 
 resource "aws_iam_role_policy_attachment" "LambdaExecutionRolePolicyAttachment" {
@@ -176,6 +199,11 @@ resource "aws_lambda_function" "TriggerDeploymentLambda" {
       APP_ID      = aws_amplify_app.ProdApp.id
       BRANCH_NAME = aws_amplify_branch.ProdAppBranch.branch_name
     }
+  }
+
+  tags = {
+    Name        = "SUIT-${var.project_name}-Prod-DeployAmplifyApp"
+    Stage       = var.stage
   }
 }
 
