@@ -651,7 +651,8 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
-          "logs:PutRetentionPolicy"
+          "logs:PutRetentionPolicy",
+          "logs:ListTagsForResource"
         ]
         Resource = "*"
       },
@@ -720,7 +721,9 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "iam:TagPolicy",
           "iam:UntagPolicy",
           "iam:TagInstanceProfile",
-          "iam:UntagInstanceProfile"
+          "iam:UntagInstanceProfile",
+          "iam:ListRolePolicies",
+          "iam:GetPolicyVersion"
         ]
         Resource = "*"
       },
@@ -731,6 +734,7 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "ec2:AuthorizeSecurityGroupEgress",
           "ec2:AuthorizeSecurityGroupIngress",
           "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeVpcAttribute",
           "ec2:DeleteSubnet",
           "ec2:ReplaceRouteTableAssociation",
           "ec2:DeleteRoute",
