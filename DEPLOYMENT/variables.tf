@@ -21,3 +21,9 @@ variable "aws_region" {
   type        = string
   default     = "eu-central-1"
 }
+
+variable "stage" {
+  description = "Stage de la pipeline a la que pertenece el recurso"
+  type        = string
+  default     = "deployment"
+}

@@ -35,6 +35,7 @@ resource "aws_vpc" "vpc" {
   tags = {
     Name        = "SUIT-${var.project_name}-VPC-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -50,6 +51,7 @@ resource "aws_subnet" "public_subnet" {
   tags = {
     Name        = "SUIT-${var.project_name}-Public-Subnet-${count.index + 1}-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -57,6 +59,7 @@ resource "aws_internet_gateway" "IGW" {
   tags = {
     Name        = "SUIT-${var.project_name}-IGW-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -76,6 +79,7 @@ resource "aws_route_table" "public_route_table" {
   tags = {
     Name        = "SUIT-${var.project_name}-Public-Route-Table-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -93,6 +97,7 @@ resource "aws_ecs_cluster" "serverless_cluster" {
   tags = {
     Name        = "SUIT-${var.project_name}-Serverless-Cluster-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -119,6 +124,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-ECSTaskExecutionRole-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -150,6 +156,7 @@ resource "aws_iam_role" "ecs_task_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-ECSTaskRole-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -200,6 +207,7 @@ resource "aws_iam_policy" "ecs_task_role_policy" {
   tags = {
     Name        = "SUIT-${var.project_name}-ECSTaskRole-Policy-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -231,6 +239,7 @@ resource "aws_iam_role" "lambda_execution_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-LambdaExecutionRole-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -289,6 +298,7 @@ resource "aws_iam_policy" "lambda_execution_role_policy" {
   tags = {
     Name        = "SUIT-${var.project_name}-LambdaExecutionRole-Policy-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -319,6 +329,7 @@ resource "aws_iam_role" "update_modules_lambda_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-UpdateModulesLambdaRole-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -347,6 +358,7 @@ resource "aws_iam_policy" "update_modules_lambda_role_policy" {
   tags = {
     Name        = "SUIT-${var.project_name}-UpdateModulesLambdaRole-Policy-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -377,6 +389,7 @@ resource "aws_iam_role" "step_functions_role" {
   tags = {
     Name        = "SUIT-${var.project_name}-SfnExecutionRole-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -416,6 +429,7 @@ resource "aws_iam_policy" "step_functions_role_policy" {
   tags = {
     Name        = "SUIT-${var.project_name}-SfnExecutionRole-Policy-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -447,6 +461,7 @@ resource "aws_lambda_function" "update_modules_lambda" {
   tags = {
     Name        = "SUIT-${var.project_name}-UpdateModules-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 
 }
@@ -549,6 +564,7 @@ resource "aws_ecs_task_definition" "serverless_firefox_ecs_task" {
   tags = {
     Name        = "SUIT-${var.project_name}-ServerlessFirefoxECSTask-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -567,6 +583,7 @@ resource "aws_security_group" "execution_sg" {
 
     tags = {
       Name = "SUIT-${var.project_name}-execution-sg"
+      Stage       = var.stage
     }
 
 }
@@ -603,6 +620,7 @@ resource "aws_lambda_function" "serverless_chrome_stable" {
   tags = {
     Name        = "SUIT-${var.project_name}-ChromeStable-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -638,6 +656,7 @@ resource "aws_lambda_function" "serverless_chrome_beta" {
   tags = {
     Name        = "SUIT-${var.project_name}-ChromeBeta-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -674,6 +693,7 @@ resource "aws_lambda_function" "serverless_chrome_video" {
   tags = {
     Name        = "SUIT-${var.project_name}-ChromeVideo-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
 
@@ -998,5 +1018,6 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
   tags = {
     Name        = "SUIT-${var.project_name}-StateMachine-${var.environment}"
     Environment = var.environment
+    Stage       = var.stage
   }
 }
