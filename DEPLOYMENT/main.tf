@@ -559,9 +559,16 @@ resource "aws_security_group" "execution_sg" {
   vpc_id      = aws_vpc.vpc.id
 
   egress {
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1" # all protocols
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    tags = {
+      Name = "SUIT-${var.project_name}-execution-sg"
+    }
+
 }
 
 // ---------------------------- SERVERLESS CHROME STABLE -------------------------------------------------------
