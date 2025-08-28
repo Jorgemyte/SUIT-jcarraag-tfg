@@ -209,18 +209,17 @@ resource "aws_lambda_function" "TriggerDeploymentLambda" {
 
 // ---------------------------- TRIGGER DEPLOYMENT -------------------------------------------------------
 
+locals {
+  trigger_deployment_payload = jsonencode({
+    appId      = aws_amplify_app.ProdApp.id
+    branchName = aws_amplify_branch.ProdAppBranch.branch_name
+  })
+}
+
 resource "null_resource" "TriggerDeployment" {
   provisioner "local-exec" {
-    command     = <<EOT
-      aws lambda invoke \
-        --function-name ${aws_lambda_function.TriggerDeploymentLambda.function_name} \
-        --payload '{
-          "appId": "${aws_amplify_app.ProdApp.id}",
-          "branchName": "${aws_amplify_branch.ProdAppBranch.branch_name}"
-        }' \
-        response.json
-    EOT
-    interpreter = ["bash", "-c"]
+    command = "aws lambda invoke --function-name ${aws_lambda_function.TriggerDeploymentLambda.function_name} --payload '${local.trigger_deployment_payload}' --cli-binary-format raw-in-base64-out response.json"
+    interpreter = ["sh", "-c"]
   }
 
   triggers = {
