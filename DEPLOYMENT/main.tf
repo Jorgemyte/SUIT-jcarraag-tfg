@@ -738,13 +738,13 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                           "s3prefix" : "${var.project_name}/",
                           "WebURL" : "https://master.${data.aws_ssm_parameter.test_app_domain.value}",
                           "StatusTable" : "${data.aws_ssm_parameter.status_table.value}"
-                        },
-                        "End" : true
-                      }
+                        }
+                      },
+                      "End" : true
                     }
-                  },
-                  "End" : true
-                }
+                  }
+                },
+                "End" : true
               }
             }
           },
@@ -771,13 +771,13 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                           "s3prefix" : "${var.project_name}/",
                           "WebURL" : "https://master.${data.aws_ssm_parameter.test_app_domain.value}",
                           "StatusTable" : "${data.aws_ssm_parameter.status_table.value}"
-                        },
-                        "End" : true
-                      }
+                        }
+                      },
+                      "End" : true
                     }
-                  },
-                  "End" : true
-                }
+                  }
+                },
+                "End" : true
               }
             }
           },
@@ -797,9 +797,9 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                     "s3prefix" : "${var.project_name}/",
                     "WebURL" : "https://master.${data.aws_ssm_parameter.test_app_domain.value}",
                     "StatusTable" : "${data.aws_ssm_parameter.status_table.value}"
-                  },
-                  "End" : true
-                }
+                  }
+                },
+                "End" : true
               }
             }
           },
@@ -863,13 +863,13 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                               ]
                             }
                           ]
-                        },
-                        "End" : true
-                      }
+                        }
+                      },
+                      "End" : true
                     }
-                  },
-                  "End" : true
-                }
+                  }
+                },
+                "End" : true
               }
             }
           },
@@ -933,13 +933,13 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                               ]
                             }
                           ]
-                        },
-                        "End" : true
-                      }
+                        }
+                      },
+                      "End" : true
                     }
-                  },
-                  "End" : true
-                }
+                  }
+                },
+                "End" : true
               }
             }
           },
@@ -1000,13 +1000,14 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                         ]
                       }
                     ]
-                  },
-                  "End" : true
-                }
+                  }
+                },
+                "End" : true
               }
             }
           }
-        ]
+        ],
+        "End" : true
       }
     }
   })
