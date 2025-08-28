@@ -346,6 +346,7 @@ resource "aws_amplify_app" "TestApp" {
   repository  = "https://github.com/${var.GitHubOwner}/${var.GitHubRepo}"
   oauth_token = jsondecode(data.aws_secretsmanager_secret_version.github_token.secret_string)["jcarraag_github_oauth_token"]
   // data.aws_secretsmanager_secret_version.github_token.secret_string
+
   build_spec = jsonencode({
     version = 1
     applications = [
@@ -357,7 +358,7 @@ resource "aws_amplify_app" "TestApp" {
             }
           }
           artifacts = {
-            baseDirectory = "/"
+            baseDirectory = "website"
             files         = ["**/*"]
           }
           cache = {
@@ -413,7 +414,7 @@ resource "aws_amplify_app" "StatusPage" {
             }
           }
           artifacts = {
-            baseDirectory = "/"
+            baseDirectory = "status"
             files         = ["**/*"]
           }
           cache = {
