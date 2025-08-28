@@ -471,11 +471,26 @@ locals {
     ResourceProperties = {
       Table = data.aws_ssm_parameter.modules_table.value
       Modules = [
-        "{\"ModId\":{\"S\":\"mod1\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}",
-        "{\"ModId\":{\"S\":\"mod2\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0004\"},{\"S\":\"tc0006\"}]}}",
-        "{\"ModId\":{\"S\":\"mod3\"},\"TestCases\":{\"L\":[{\"S\":\"tc0003\"},{\"S\":\"tc0006\"}]}}",
-        "{\"ModId\":{\"S\":\"mod4\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0002\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"}]}}",
-        "{\"ModId\":{\"S\":\"mod5\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}"
+        {
+          ModId     = { S = "mod1" }
+          TestCases = { L = [{ S = "tc0001" }, { S = "tc0003" }, { S = "tc0005" }, { S = "tc0007" }] }
+        },
+        {
+          ModId     = { S = "mod2" }
+          TestCases = { L = [{ S = "tc0002" }, { S = "tc0004" }, { S = "tc0006" }] }
+        },
+        {
+          ModId     = { S = "mod3" }
+          TestCases = { L = [{ S = "tc0003" }, { S = "tc0006" }] }
+        },
+        {
+          ModId     = { S = "mod4" }
+          TestCases = { L = [{ S = "tc0001" }, { S = "tc0002" }, { S = "tc0003" }, { S = "tc0005" }] }
+        },
+        {
+          ModId     = { S = "mod5" }
+          TestCases = { L = [{ S = "tc0002" }, { S = "tc0003" }, { S = "tc0005" }, { S = "tc0007" }] }
+        }
       ]
     }
   })
@@ -483,7 +498,7 @@ locals {
 
 resource "null_resource" "update_modules" {
   provisioner "local-exec" {
-    command     = "aws lambda invoke --function-name ${aws_lambda_function.update_modules_lambda.function_name} --payload '${local.modules_payload}' response.json"
+    command     = "aws lambda invoke --function-name ${aws_lambda_function.update_modules_lambda.function_name} --payload '${local.modules_payload}' --cli-binary-format raw-in-base64-out response.json"
     interpreter = ["sh", "-c"]
   }
 

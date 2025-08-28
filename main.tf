@@ -841,7 +841,8 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "states:DescribeExecution",
           "states:GetExecutionHistory",
           "states:StartExecution",
-          "states:StopExecution"
+          "states:StopExecution",
+          "states:ListStateMachineVersions"
         ]
         Resource = "*"
       },
