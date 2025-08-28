@@ -431,6 +431,11 @@ resource "aws_iam_policy" "step_functions_role_policy" {
 
 }
 
+resource "aws_iam_role_policy_attachment" "step_functions_policy_attachment" {
+  role       = aws_iam_role.step_functions_role.name
+  policy_arn = aws_iam_policy.step_functions_role_policy.arn
+}
+
 // ---------------------------- UPDATE MODULES LAMBDA FUNCTION -------------------------------------------------------
 
 data "archive_file" "lambda" {
