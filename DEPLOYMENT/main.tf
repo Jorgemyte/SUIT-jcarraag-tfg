@@ -369,17 +369,17 @@ resource "aws_iam_role_policy_attachment" "update_modules_lambda_role_policy_att
 
 resource "aws_iam_role" "step_functions_role" {
   name = "SUIT-${var.project_name}-SfnExecutionRole"
-  
+
   assume_role_policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [{
-        Effect = "Allow"
-        Principal = {
-          Service = "states.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }]
-    })
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "states.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
 
   path = "/"
 
@@ -469,7 +469,7 @@ locals {
   modules_payload = jsonencode({
     RequestType = "Create"
     ResourceProperties = {
-      Table   = data.aws_ssm_parameter.modules_table.value
+      Table = data.aws_ssm_parameter.modules_table.value
       Modules = [
         "{\"ModId\":{\"S\":\"mod1\"},\"TestCases\":{\"L\":[{\"S\":\"tc0001\"},{\"S\":\"tc0003\"},{\"S\":\"tc0005\"},{\"S\":\"tc0007\"}]}}",
         "{\"ModId\":{\"S\":\"mod2\"},\"TestCases\":{\"L\":[{\"S\":\"tc0002\"},{\"S\":\"tc0004\"},{\"S\":\"tc0006\"}]}}",
@@ -483,7 +483,7 @@ locals {
 
 resource "null_resource" "update_modules" {
   provisioner "local-exec" {
-    command = "aws lambda invoke --function-name ${aws_lambda_function.update_modules_lambda.function_name} --payload '${local.modules_payload}' response.json"
+    command     = "aws lambda invoke --function-name ${aws_lambda_function.update_modules_lambda.function_name} --payload '${local.modules_payload}' response.json"
     interpreter = ["sh", "-c"]
   }
 
@@ -571,16 +571,16 @@ resource "aws_security_group" "execution_sg" {
   vpc_id      = aws_vpc.vpc.id
 
   egress {
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1" # all protocols
-      cidr_blocks = ["0.0.0.0/0"]
-    }
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1" # all protocols
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-    tags = {
-      Name = "SUIT-${var.project_name}-execution-sg"
-      Stage       = var.stage
-    }
+  tags = {
+    Name  = "SUIT-${var.project_name}-execution-sg"
+    Stage = var.stage
+  }
 
 }
 

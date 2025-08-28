@@ -830,12 +830,18 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
       {
         Effect = "Allow"
         Action = [
-          "states:DeleteStateMachine",
           "states:UntagResource",
           "states:TagResource",
           "states:CreateStateMachine",
           "states:UpdateStateMachine",
-          "states:ValidateStateMachineDefinition"
+          "states:DeleteStateMachine",
+          "states:ValidateStateMachineDefinition",
+          "states:DescribeStateMachine",
+          "states:ListExecutions",
+          "states:DescribeExecution",
+          "states:GetExecutionHistory",
+          "states:StartExecution",
+          "states:StopExecution"
         ]
         Resource = "*"
       },
@@ -894,7 +900,7 @@ resource "aws_codebuild_project" "TerraformDeployProject" {
 
   environment {
     compute_type = "BUILD_GENERAL1_SMALL"
-    image        = "hashicorp/terraform:1.5.7"
+    image        = "aws/codebuild/standard:7.0"
     type         = "LINUX_CONTAINER"
     environment_variable {
       name  = "AWS_REGION"
@@ -925,7 +931,7 @@ resource "aws_codebuild_project" "TerraformProdDeployProject" {
 
   environment {
     compute_type = "BUILD_GENERAL1_SMALL"
-    image        = "hashicorp/terraform:1.5.7"
+    image        = "aws/codebuild/standard:7.0"
     type         = "LINUX_CONTAINER"
     environment_variable {
       name  = "AWS_REGION"
