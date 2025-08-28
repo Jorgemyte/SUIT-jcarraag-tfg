@@ -19,7 +19,7 @@ def lambda_handler(event, context):
             modules = props.get('Modules', [])
 
             for module in modules:
-                ddb.put_item(TableName=ddb_table, Item=json.loads(module))
+                ddb.put_item(TableName=ddb_table, Item=module)
 
             return {
                 'statusCode': 200,
