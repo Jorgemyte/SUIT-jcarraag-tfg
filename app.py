@@ -31,12 +31,39 @@ s3 = boto3.client('s3')
 ddb = boto3.client('dynamodb')
 sfn = boto3.client('stepfunctions')
 
-# Configuración de display virtual
-enable_display = os.environ.get('DISPLAY') == ':25'
-if enable_display:
-    display = Display(visible=False, size=(2560, 1440))
+#  -----------------------------------------------------------------------------
+#  Configuración  de  display  virtual
+# -----------------------------------------------------------------------------
+#  CAMBIO:  Control  explícito  para usar  o  no  Xvfb/pyvirtualdisplay.  Antes  dependías
+#  de  que  DISPLAY  fuera  exactamente ':25',  lo  cual  no  es  fiable en  Lambda.
+#  Ahora  se  usa una  bandera  USE_VDISPLAY  (por  defecto  '1') y  dejamos  que
+#  pyvirtualdisplay  elija un  display  libre  y  exporte  DISPLAY de  forma  coherente.
+USE_VDISPLAY  =  os.environ.get('USE_VDISPLAY', '1')  in  ('1',  'true',  'True')
+
+display  =  None
+if  USE_VDISPLAY:
+    #  CAMBIO:  Iniciamos un  display  virtual  sin  fijar  número. pyvirtualdisplay
+    # actualiza  os.environ['DISPLAY']  con  el  display  real (p.ej.  ':99').
+    display  =  Display(visible=False,  size=(2560,  1440))
     display.start()
-    print(f'Started Display {os.environ["DISPLAY"]}')
+    print(f'Started  Display  {os.environ.get("DISPLAY")}')
+
+def  _wait_x_socket_ready(timeout=5.0):
+    """
+    CAMBIO: Espera  a  que  el  socket  X del  display  esté  disponible  antes  de lanzar  ffmpeg.
+    Evita  el  error  'Cannot  open  display' por  arrancar  ffmpeg  demasiado  pronto.
+    """
+    disp  =  os.environ.get('DISPLAY',  '')
+    num  = disp.split(':')[-1].split('.')[0]  if  disp  else  ''
+    sock  =  f'/tmp/.X11-unix/X{num}' if  num  else  ''
+    if  not  sock:
+        return  False
+    deadline  =  time.time()  +  timeout
+    while  time.time() <  deadline:
+        if  os.path.exists(sock):
+                return  True
+        time.sleep(0.1)
+    return  os.path.exists(sock)
 
 # Inicialización del navegador
 driver = None
@@ -44,11 +71,13 @@ driver = None
 if br == 'firefox':
     firefox_options =  FirefoxOptions()
     firefox_options.binary_location =  f'/opt/firefox/{br_version}/firefox'
-    if not  enable_display:
-        firefox_options.add_argument("-headless")
-    firefox_options.add_argument("-safe-mode")
-    firefox_options.add_argument("--width=2560")
-    firefox_options.add_argument("--height=1440")
+
+    #  CAMBIO:  Si  no  usamos  Xvfb, activamos  headless.  Si  lo  usamos,  que renderice  en  Xvfb.
+    if  not  USE_VDISPLAY:
+        firefox_options.add_argument('-headless')
+        firefox_options.add_argument('-safe-mode')
+        firefox_options.add_argument('--width=2560')
+        firefox_options.add_argument('--height=1440')
 
     random_dir =  '/tmp/'  + ''.join(random.choices(string.ascii_lowercase,  k=8))
     os.makedirs(random_dir, exist_ok=True)
@@ -64,18 +93,19 @@ if br == 'firefox':
 
 elif br == 'chrome':
     chrome_options = ChromeOptions()
-    if not enable_display:
-        chrome_options.add_argument('--headless')
+    #  CAMBIO:  Usa  '--headless=new'  solo  si no  hay  Xvfb.  Con  Xvfb,  Chrome dibuja  en  el  DISPLAY.
+    if  not  USE_VDISPLAY:
+        chrome_options.add_argument('--headless=new')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--disable-dev-tools')
     chrome_options.add_argument('--no-zygote')
-    chrome_options.add_argument('--single-process')
+    #  CAMBIO:  Eliminado  --single-process  por inestabilidad  en  Chrome  moderno.
     chrome_options.add_argument('window-size=2560x1440')
     chrome_options.add_argument('--user-data-dir=/tmp/chrome-user-data')
     chrome_options.add_argument('--remote-debugging-port=9222')
-    chrome_options.binary_location = f'/opt/chrome/{br_version}/chrome'
+    chrome_options.binary_location =  f'/opt/chrome/{br_version}/chrome'
 
     chrome_service = ChromeService(executable_path=f'/opt/chromedriver/{driver_version}/chromedriver',
                                    log_path='/tmp/chromedriver.log')
@@ -180,7 +210,8 @@ def tc0001(browser, mod, tc, s3buck, s3prefix, trun, main_url, status_table):
 
         browser.get_screenshot_as_file(fpath)
         with open(fpath, 'rb') as data:
-                   os.remove(fpath)
+            s3.upload_fileobj(data, s3buck, s3prefix + fname)           
+        os.remove(fpath)
 
         print(f'Completed test {funcname()}')
         endtime = datetime.now().strftime('%d-%m-%Y %H:%M:%S,%f')
@@ -243,83 +274,121 @@ def tc0002(browser, mod, tc, s3buck, s3prefix, trun, main_url, status_table):
         update_status(mod, tc, starttime, endtime, 'Failed', traceback.format_exc(), trun, status_table)
         return {"status": "Failed", "message": "Failed to execute TC0002. Check logs for details."}
 
-def tc0011(browser, mod, tc, s3buck, s3prefix, trun, main_url, status_table):
-    recorder = None
+def  tc0011(browser, mod,  tc,  s3buck,  s3prefix,  trun,  main_url, status_table):
+    recorder =  None
+    video_path  =  '/tmp/tc0011.mp4'    #  CAMBIO: ruta  centralizada  para  validaciones
     try:
-        if enable_display:
-            filepath = '/tmp/'
-            recorder = subprocess.Popen([
-                '/usr/bin/ffmpeg', '-f', 'x11grab', '-video_size', '2560x1440',
-                '-framerate', '25', '-probesize', '10M', '-i', ':25',
-                '-y', filepath + 'tc0011.mp4'
-            ])
-            time.sleep(0.5)
+        if USE_VDISPLAY:
+            #  CAMBIO:  Espera  activa  al socket  X  de  Xvfb  para  evitar 'Cannot  open  display'.
+            if  not  _wait_x_socket_ready(timeout=5.0):
+                raise  RuntimeError('Xvfb display  not  ready')
+
+            current_display  = os.environ.get('DISPLAY',  ':0')
+            #  CAMBIO:  ffmpeg  usa el  DISPLAY  real  del  entorno  (no fijo  ':25').
+            #  Añadimos  códec  H.264, pix_fmt  y  +faststart  para  asegurar  compatibilidad y  cierre  correcto  del  MP4.
+            ffmpeg_cmd =  [
+                '/usr/bin/ffmpeg',
+                '-f', 'x11grab',
+                '-video_size', '2560x1440',
+                '-framerate', '25',
+                '-probesize', '10M',
+                '-i', f'{current_display}',
+                '-c:v', 'libx264',
+                '-preset', 'veryfast',
+                '-crf', '23',
+                '-pix_fmt', 'yuv420p',
+                '-movflags', '+faststart',
+                '-y', video_path
+            ]
+            #  CAMBIO:  Capturamos  stdout/stderr para  subirlos  si  algo  falla  (mejor diagnóstico).
+            recorder  =  subprocess.Popen(ffmpeg_cmd,  stdout=subprocess.PIPE,  stderr=subprocess.PIPE)
+            time.sleep(0.5)    #  pequeño  respiro  para que  inicie
 
         print('Getting URL')
-        starttime = datetime.now().strftime('%d-%m-%Y %H:%M:%S,%f')
-        endtime = ' '
-        update_status(mod, tc, starttime, endtime, 'Started', ' ', trun, status_table)
+        starttime  =  datetime.now().strftime('%d-%m-%Y %H:%M:%S,%f')
+        endtime  =  ' '
+        update_status(mod,  tc,  starttime, endtime,  'Started',  '  ',  trun,  status_table)
 
-        def navigate_and_assert(title, element_id=None, xpath=None, name=None, click_id=None):
-            browser.get(main_url)
-            assert 'Serverless UI Testing' in browser.title
-            WebDriverWait(browser, 20).until(EC.visibility_of_element_located((By.ID, 'kp')))
-            if xpath:
-                browser.find_element(By.XPATH, xpath).click()
-            if click_id:
-                browser.find_element(By.ID, click_id).click()
-            if name:
-                WebDriverWait(browser, 20).until(EC.visibility_of_element_located((By.NAME, name)))
-            if element_id:
-                WebDriverWait(browser, 20).until(EC.visibility_of_element_located((By.ID, element_id)))
-            assert title in browser.title
+        def  navigate_and_assert(title,  element_id=None, xpath=None,  name=None,  click_id=None):
+                browser.get(main_url)
+                assert  'Serverless UI  Testing'  in  browser.title
+                WebDriverWait(browser,  20).until(EC.visibility_of_element_located((By.ID, 'kp')))
+                if  xpath:
+                        browser.find_element(By.XPATH,  xpath).click()
+                if  click_id:
+                        browser.find_element(By.ID,  click_id).click()
+                if name:
+                        WebDriverWait(browser, 20).until(EC.visibility_of_element_located((By.NAME,  name)))
+                if  element_id:
+                        WebDriverWait(browser,  20).until(EC.visibility_of_element_located((By.ID,  element_id)))
+                assert title  in  browser.title
 
-        navigate_and_assert('Serverless UI Testing - Button Click.', xpath="//*[@id='bc']/a", element_id='displaybtn')
-        browser.find_element(By.ID, 'displaybtn').click()
-        WebDriverWait(browser, 20).until(EC.visibility_of_element_located((By.ID, 'cbbutton')))
+        navigate_and_assert('Serverless  UI  Testing  -  Button  Click.', xpath="//*[@id='bc']/a",  element_id='displaybtn')
+        browser.find_element(By.ID,  'displaybtn').click()
+        WebDriverWait(browser,  20).until(EC.visibility_of_element_located((By.ID,  'cbbutton')))
 
-        navigate_and_assert('Serverless UI Testing - Check Box.', xpath="//*[@id='cb']/a", element_id='box3')
-        browser.find_element(By.ID, 'box1').click()
-        WebDriverWait(browser, 20).until(EC.visibility_of_element_located((By.ID, 'cbbox1')))
+        navigate_and_assert('Serverless  UI  Testing  - Check  Box.',  xpath="//*[@id='cb']/a",  element_id='box3')
+        browser.find_element(By.ID,  'box1').click()
+        WebDriverWait(browser,  20).until(EC.visibility_of_element_located((By.ID, 'cbbox1')))
 
-        navigate_and_assert('Serverless UI Testing - Dropdown', xpath="//*[@id='dd']/a", name='cbdropdown')
-        browser.find_element(By.ID, 'CP').click()
-        WebDriverWait(browser, 20).until(EC.visibility_of_element_located((By.ID, 'dvidrop')))
+        navigate_and_assert('Serverless  UI Testing  -  Dropdown',  xpath="//*[@id='dd']/a",  name='cbdropdown')
+        browser.find_element(By.ID,  'CP').click()
+        WebDriverWait(browser, 20).until(EC.visibility_of_element_located((By.ID,  'dvidrop')))
 
-        navigate_and_assert('Serverless UI Testing - Images', xpath="//*[@id='img']/a", element_id='image1')
+        navigate_and_assert('Serverless UI  Testing  -  Images',  xpath="//*[@id='img']/a",  element_id='image1')
 
-        navigate_and_assert('Serverless UI Testing - Key Press.', xpath="//*[@id='kp']/a", element_id='titletext')
+        navigate_and_assert('Serverless  UI  Testing -  Key  Press.',  xpath="//*[@id='kp']/a",  element_id='titletext')
 
-        endtime = datetime.now().strftime('%d-%m-%Y %H:%M:%S,%f')
+        endtime  =  datetime.now().strftime('%d-%m-%Y  %H:%M:%S,%f')
 
-        if enable_display and recorder:
-            recorder.terminate()
-            time.sleep(7)
-            print('Closed recorder')
-            recorder.wait(timeout=20)
-
-        update_status(mod, tc, starttime, endtime, 'Passed', ' ', trun, status_table)
-
-        if enable_display:
+        if  USE_VDISPLAY  and recorder:
+            #  CAMBIO:  Terminar  ffmpeg  y esperar  exit  para  que  el  MP4 finalice  correctamente.
+            recorder.terminate()    #  SIGTERM permite  a  ffmpeg  escribir  índices  (moov).
             try:
-                s3.upload_file('/tmp/tc0011.mp4', s3buck, s3prefix + 'tc0011.mp4')
-                os.remove('/tmp/tc0011.mp4')
-            except Exception:
+                ret =  recorder.wait(timeout=20)
+            except  subprocess.TimeoutExpired:
+                recorder.kill()
+                ret  =  recorder.wait(timeout=5)
+            print('Closed  recorder')
+
+        update_status(mod,  tc,  starttime, endtime,  'Passed',  '  ',  trun,  status_table)
+
+        if  USE_VDISPLAY:
+            # CAMBIO:  Validar  existencia  y  tamaño  antes de  subir  a  S3  para  evitar FileNotFound.
+            try:
+                if  os.path.exists(video_path)  and  os.path.getsize(video_path)  >  0:
+                    s3.upload_file(video_path,  s3buck,  s3prefix  + 'tc0011.mp4')
+                    os.remove(video_path)
+                else:
+                    # Si  el  vídeo  no  existe  o está  vacío,  sube  stderr  de  ffmpeg para  diagnóstico
+                    if  recorder:
+                        try:
+                            _, err  =  recorder.communicate(timeout=2)
+                            err  =  err.decode('utf-8',  errors='replace')
+                            with  open('/tmp/ffmpeg_stderr.log',  'w') as  f:
+                                f.write(err)
+                            s3.upload_file('/tmp/ffmpeg_stderr.log',  s3buck,  s3prefix +  'ffmpeg_stderr.log')
+                        except  Exception:
+                            pass
+                    raise FileNotFoundError(f'Video  not  created  or  empty:  {video_path}')
+            except  Exception:
                 traceback.print_exc()
-                return {"status": "Failed", "message": "Failed to upload video to S3"}
+                return {"status":  "Failed",  "message":  "Failed  to  upload video  to  S3"}
 
-        return {"status": "Success", "message": "Successfully executed TC0011"}
+        return  {"status":  "Success",  "message":  "Successfully  executed TC0011"}
 
-    except Exception:
+    except  Exception:
         traceback.print_exc()
         try:
-            s3.upload_file('/tmp/chromedriver.log', s3buck, s3prefix + 'chromedriver.log')
-        except Exception:
+            s3.upload_file('/tmp/chromedriver.log',  s3buck,  s3prefix  + 'chromedriver.log')
+        except  Exception:
             pass
-        if recorder:
-            recorder.terminate()
-        return {"status": "Failed", "message": "Failed to execute TC0011. Check logs for details."}
-
+        if  recorder:
+            try:
+                recorder.terminate()
+            except  Exception:
+                pass
+        return  {"status":  "Failed",  "message":  "Failed to  execute  TC0011.  Check  logs  for details."}
 
 def tc0003(browser, mod, tc, s3buck, s3prefix, trun, main_url, status_table):
     fname = f"{mod}-{tc}.png"
