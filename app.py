@@ -42,13 +42,17 @@ if br == 'firefox':
     firefox_options = FirefoxOptions()
     if not enable_display:
         firefox_options.add_argument("-headless")
-    firefox_options.add_argument("-safe-mode")
+    #firefox_options.add_argument("-safe-mode")
+    firefox_options.add_argument("--no-sandbox")
+    firefox_options.add_argument("--disable-dev-shm-usage")
+    firefox_options.add_argument("--disable-gpu")
     firefox_options.add_argument("--width=2560")
     firefox_options.add_argument("--height=1440")
 
     # Crear perfil temporal como antes
     random_dir = '/tmp/' + ''.join(random.choice(string.ascii_lowercase) for i in range(8))
     os.mkdir(random_dir)
+    os.chmod(random_dir, 0o755)
     firefox_options.set_preference("profile", random_dir)
 
     firefox_options.binary_location = f'/opt/firefox/{br_version}/firefox'
