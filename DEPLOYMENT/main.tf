@@ -866,7 +866,7 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                                 },
                                 {
                                   "Name" : "DRIVER_VERSION",
-                                  "Value" : "0.29.0"
+                                  "Value" : "0.36.0"
                                 },
                                 {
                                   "Name" : "module",
@@ -936,7 +936,7 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                                 },
                                 {
                                   "Name" : "DRIVER_VERSION",
-                                  "Value" : "0.29.0"
+                                  "Value" : "0.36.0"
                                 },
                                 {
                                   "Name" : "module",
@@ -999,7 +999,7 @@ resource "aws_sfn_state_machine" "automated_testing_state_machine" {
                           },
                           {
                             "Name" : "DRIVER_VERSION",
-                            "Value" : "0.29.0"
+                            "Value" : "0.36.0"
                           },
                           {
                             "Name" : "module",
