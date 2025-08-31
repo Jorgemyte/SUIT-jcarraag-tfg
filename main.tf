@@ -879,6 +879,16 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "amplify:UpdateApp"
         ]
         Resource = "*"
+      },
+      # Secrets Manager
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:ListSecrets"
+        ]
+        Resource = data.aws_secretsmanager_secret.github_token.arn
       }
     ]
   })
