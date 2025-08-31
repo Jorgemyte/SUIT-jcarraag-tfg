@@ -77,7 +77,7 @@ resource "aws_amplify_app" "ProdApp" {
             }
           }
           artifacts = {
-            baseDirectory = "/"
+            baseDirectory = "website"
             files         = ["**/*"]
           }
           cache = {
@@ -234,7 +234,6 @@ resource "null_resource" "TriggerDeployment" {
 resource "aws_ssm_parameter" "ProdAppDomainParameter" {
   name        = "ProdAppURL"
   type        = "String"
-  value       = "https://${aws_amplify_app.ProdApp.branch_name}.${aws_amplify_app.ProdApp.default_domain}"
+  value       = "https://${aws_amplify_branch.ProdAppBranch.branch_name}.${aws_amplify_app.ProdApp.default_domain}"
   description = "URL of production website"
 }
-
