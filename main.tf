@@ -888,7 +888,7 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "secretsmanager:DescribeSecret",
           "secretsmanager:ListSecrets"
         ]
-        Resource = data.aws_secretsmanager_secret.github_token.arn
+        Resource = "*"
       }
     ]
   })
