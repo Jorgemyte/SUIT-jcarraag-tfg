@@ -89,78 +89,40 @@ def funcname():
     return inspect.stack()[1].function  # Más legible y moderno
 
 def update_status(mod, tc, st, et, ss, er, trun, status_table):
-    t_t  =  ' '    #  valor  por  defecto
-    key  =  {
-            'testrunid':  {'S':  trun},
-            'testcaseid':  {'S':  f"{mod}-{br}_{br_version}-{tc}"}
-    }
+    if et != ' ':
+        t_t = str(int(round((datetime.strptime(et, '%d-%m-%Y %H:%M:%S,%f') -
+                             datetime.strptime(st, '%d-%m-%Y %H:%M:%S,%f')).microseconds, -3) / 1000))
+    else:
+        t_t = ' '
     try:
-        if et.strip():
-            start_dt = datetime.strptime(st, '%d-%m-%Y %H:%M:%S,%f')
-            end_dt = datetime.strptime(et, '%d-%m-%Y %H:%M:%S,%f')
-            t_t = str(int(round((end_dt - start_dt).total_seconds() * 1000, -3)))
-        else:
-            t_t = ' '
-
-        key = {
-            'testrunid': {'S': trun},
-            'testcaseid': {'S': f"{mod}-{br}_{br_version}-{tc}"}
-        }
-
         if er:
-            update_expr = (
-                "SET details.StartTime = :st, details.EndTime = :e, details.#S = :s, "
-                "details.ErrorMessage = :er, details.TimeTaken = :tt"
-            )
-            expr_values = {
-                ':st': {'S': st},
-                ':e': {'S': et},
-                ':s': {'S': ss},
-                ':er': {'S': er},
-                ':tt': {'S': t_t}
-            }
+            ddb.update_item(Key={'testrunid': {'S': trun}, 'testcaseid': 
+                                              {'S': mod + '-' + br + '_' + br_version + '-' + tc}},
+                            UpdateExpression="set details.StartTime = :st, details.EndTime = :e, details.#S = :s," +
+                            "details.ErrorMessage = :er, details.TimeTaken = :tt",
+                            ExpressionAttributeValues={':e': {'S': et}, ':s': {'S': ss}, ':st': {'S': st},
+                                                       ':er': {'S': er}, ':tt': {'S': t_t}},
+                            TableName=status_table, ExpressionAttributeNames={'#S': 'Status'})
         else:
-            update_expr = (
-                "SET details.StartTime = :st, details.EndTime = :e, details.#S = :s, "
-                "details.TimeTaken = :tt"
-            )
-            expr_values = {
-                ':st': {'S': st},
-                ':e': {'S': et},
-                ':s': {'S': ss},
-                ':tt': {'S': t_t}
-            }
-
-        ddb.update_item(
-            TableName=status_table,
-            Key=key,
-            UpdateExpression=update_expr,
-            ExpressionAttributeValues=expr_values,
-            ExpressionAttributeNames={'#S': 'Status'}
-        )
-
+            ddb.update_item(Key={'testrunid': {'S': trun}, 'testcaseid':
+                                              {'S': mod + '-' + br + '_' + br_version + '-' + tc}},
+                            UpdateExpression="set details.StartTime = :st, details.EndTime = :e, details.#S = :s," +
+                                             "details.TimeTaken = :tt",
+                            ExpressionAttributeValues={':e': {'S': et}, ':s': {'S': ss}, ':st': {'S': st},
+                                                       ':tt': {'S': t_t}},
+                            TableName=status_table, ExpressionAttributeNames={'#S': 'Status'})
     except ClientError as e:
         if e.response['Error']['Code'] == 'ValidationException':
-            ddb.update_item(
-                TableName=status_table,
-                Key=key,
-                UpdateExpression="SET #atName = :atValue",
-                ExpressionAttributeValues={
-                    ':atValue': {
-                        'M': {
-                            'StartTime': {'S': st},
-                            'EndTime': {'S': et},
-                            'Status': {'S': ss},
-                            'ErrorMessage': {'S': er},
-                            'TimeTaken': {'S': t_t}
-                        }
-                    }
-                },
-                ExpressionAttributeNames={'#atName': 'details'}
-            )
+            ddb.update_item(Key={'testrunid': {'S': trun}, 'testcaseid':
+                                              {'S': mod + '-' + br + '_' + br_version + '-' + tc}},
+                            UpdateExpression="set #atName = :atValue", ExpressionAttributeValues={
+                            ':atValue': {'M': {'StartTime': {'S': st}, 'EndTime': {'S': et}, 'Status': {'S': ss},
+                                               'ErrorMessage': {'S': er}, 'TimeTaken': {'S': t_t}}}},
+                            TableName=status_table,
+                            ExpressionAttributeNames={'#atName': 'details'})
         else:
             traceback.print_exc()
-    except Exception:
+    except:
         traceback.print_exc()
 
 def tc0001(browser, mod, tc, s3buck, s3prefix, trun, main_url, status_table):
