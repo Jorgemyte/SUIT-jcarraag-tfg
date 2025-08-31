@@ -80,7 +80,7 @@ function tableCreate() {
     ExpressionAttributeNames: {
       "#testrunid": "testrunid"
     },
-   AttributeValues: {
+    ExpressionAttributeValues: {
       ":trid": trunid
     }
   };

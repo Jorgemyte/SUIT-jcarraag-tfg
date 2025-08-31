@@ -236,4 +236,5 @@ resource "aws_ssm_parameter" "ProdAppDomainParameter" {
   type        = "String"
   value       = "https://${aws_amplify_branch.ProdAppBranch.branch_name}.${aws_amplify_app.ProdApp.default_domain}"
   description = "URL of production website"
+  overwrite   = true
 }
