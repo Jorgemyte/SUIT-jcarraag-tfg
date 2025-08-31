@@ -1120,6 +1120,13 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
       run_order = 1
     }
+    
+    on_failure {
+      result = "RETRY"
+      retry_configuration {
+        retry_mode = "FAILED_ACTIONS"
+      }
+    }
   }
 
   stage {
