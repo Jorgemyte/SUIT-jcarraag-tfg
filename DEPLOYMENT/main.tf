@@ -517,8 +517,7 @@ resource "null_resource" "update_modules" {
 // ---------------------------- SERVERLESS FIREFOX (FARGATE & LOG GROUP) -------------------------------------------------------
 
 resource "aws_cloudwatch_log_group" "serverless_firefox_log_group" {
-  name              = "/${var.project_name}/ServerlessFirefox"
-  retention_in_days = 3
+  name              = "/SUIT-${var.project_name}/ServerlessFirefox"
 }
 
 resource "aws_ecs_task_definition" "serverless_firefox_ecs_task" {
