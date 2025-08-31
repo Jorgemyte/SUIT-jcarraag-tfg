@@ -1079,6 +1079,7 @@ data "aws_secretsmanager_secret_version" "github_token" {
 resource "aws_codepipeline" "ServerlessUITestPipeline" {
   name     = "${var.project_name}-ServerlessUITestPipeline"
   role_arn = aws_iam_role.CodePipelineRole.arn
+  pipeline_type = "V2"
 
   stage {
     name = "Source"
