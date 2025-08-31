@@ -686,7 +686,8 @@ resource "aws_iam_policy" "TerraformCodeBuildPolicy" {
           "ssm:DeleteParameters",
           "ssm:AddTagsToResource",
           "ssm:RemoveTagsFromResource",
-          "ssm:DescribeParameters"
+          "ssm:DescribeParameters",
+          "ssm:ListTagsForResource"
         ]
         Resource = "*"
       },
@@ -1172,7 +1173,7 @@ resource "aws_codepipeline" "ServerlessUITestPipeline" {
 
       configuration = {
         NotificationArn    = aws_sns_topic.approval_topic.arn
-        ExternalEntityLink = "https://${aws_amplify_branch.StatusPageBranch.branch_name}.${aws_amplify_app.StatusPage.default_domain}/?earn=#{TestVariables.ExecutionArn}"
+        ExternalEntityLink = "https://${aws_amplify_branch.StatusPageBranch.branch_name}.${aws_amplify_app.StatusPage.default_domain}/?testrunid=#{TestVariables.ExecutionName}"
         CustomData         = "Approve production deployment after validating the test status."
       }
 

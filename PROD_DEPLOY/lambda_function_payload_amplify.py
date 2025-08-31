@@ -4,15 +4,24 @@ import boto3
 amplify = boto3.client('amplify')
 
 def lambda_handler(event, context):
+    print("Raw event:", event)
+
     try:
+        if isinstance(event, str):
+            event = json.loads(event)
+
         app_id = event['appId']
         branch_name = event['branchName']
 
-        amplify.start_job(
+        print(f"Triggering Amplify job for appId={app_id}, branchName={branch_name}")
+
+        response = amplify.start_job(
             appId=app_id,
             branchName=branch_name,
             jobType='RELEASE'
         )
+
+        print("Amplify response:", response)
 
         return {
             'statusCode': 200,
