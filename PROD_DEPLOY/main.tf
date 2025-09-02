@@ -187,7 +187,7 @@ resource "aws_lambda_function" "TriggerDeploymentLambda" {
   filename      = "lambda_function_payload_amplify.zip"
   function_name = "SUIT-${var.project_name}-Prod-DeployAmplifyApp"
   role          = aws_iam_role.LambdaExecutionRole.arn
-  handler       = "index.lambda_handler"
+  handler       = "lambda_function_payload_amplify.lambda_handler"
   runtime       = "python3.8"
   timeout       = 85
 
