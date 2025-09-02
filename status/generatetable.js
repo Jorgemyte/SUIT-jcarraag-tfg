@@ -1,10 +1,10 @@
 /* jshint esversion: 6 */
 
 AWS.config.credentials = new AWS.CognitoIdentityCredentials({
-  IdentityPoolId: 'Cognito_IDP_ID',
+  IdentityPoolId: 'eu-central-1:12f3415c-fb90-4303-ad33-635e2324d9c6',
 });
 
-AWS.config.region = "AWS_REGION";
+AWS.config.region = "eu-central-1";
 var ddb = new AWS.DynamoDB.DocumentClient();
 var body, chrome_tab, firefox_tab;
 var firstload = 1;
@@ -75,7 +75,7 @@ function getdata(trunid, params) {
 function tableCreate() {
   const trunid = document.getElementById("testrunid").value;
   const params = {
-    TableName: 'DDB_STATUS_TABLE',
+    TableName: 'StatusTable-jcarraag-tfg',
     KeyConditionExpression: "#testrunid = :trid",
     ExpressionAttributeNames: {
       "#testrunid": "testrunid"
